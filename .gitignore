@@ -1,0 +1,28 @@
+# Binary outputs
+vocat-server
+vocat-cli
+ocr_web
+test-clean
+roundtrip-test
+
+# Environment & Secrets
+.env
+*.pem
+*.key
+
+# Data & Storage
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/outputs/*
+!storage/outputs/.gitkeep
+storage/runs_db.json
+
+# Web Node modules & build artifacts
+web/node_modules/
+web/dist/
+web/.vite/
+
+# OS / Editor artifacts
+.DS_Store
+*.swp
+*.tmp

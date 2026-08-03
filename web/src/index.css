@@ -1,0 +1,373 @@
+@import "tailwindcss";
+@import url('https://fonts.cdnfonts.com/css/monaco');
+
+@theme {
+  --font-sans: 'Roboto', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Monaco', ui-monospace, monospace;
+}
+
+/* Official Radix Theme Mode Engine */
+
+/* 1. Midnight Raycast Dark */
+html[data-theme="midnight"], body[data-theme="midnight"] {
+  --bg-canvas: #030712;
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --text-muted: #64748b;
+  --panel-bg: rgba(15, 23, 42, 0.95);
+  --card-bg: rgba(30, 41, 59, 0.8);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --accent-color: #06b6d4;
+  --accent-glow: rgba(6, 182, 212, 0.35);
+  --table-header-bg: rgba(15, 23, 42, 0.9);
+}
+
+/* 2. Nordic Frost Light (Default Radix Light) */
+html[data-theme="nordic"], body[data-theme="nordic"], :root {
+  --bg-canvas: #f8fafc;
+  --text-main: #0f172a;
+  --text-sub: #334155;
+  --text-muted: #64748b;
+  --panel-bg: rgba(255, 255, 255, 0.98);
+  --card-bg: #ffffff;
+  --border-color: rgba(203, 213, 225, 0.9);
+  --accent-color: #0284c7;
+  --accent-glow: rgba(2, 132, 199, 0.25);
+  --table-header-bg: #f1f5f9;
+}
+
+/* 3. Cyberpunk Neon */
+html[data-theme="cyberpunk"], body[data-theme="cyberpunk"] {
+  --bg-canvas: #090514;
+  --text-main: #f472b6;
+  --text-sub: #c084fc;
+  --text-muted: #a855f7;
+  --panel-bg: rgba(24, 9, 43, 0.95);
+  --card-bg: rgba(40, 16, 68, 0.85);
+  --border-color: rgba(236, 72, 153, 0.35);
+  --accent-color: #ec4899;
+  --accent-glow: rgba(236, 72, 153, 0.45);
+  --table-header-bg: rgba(24, 9, 43, 0.95);
+}
+
+/* 4. Emerald Forest */
+html[data-theme="emerald"], body[data-theme="emerald"] {
+  --bg-canvas: #022c22;
+  --text-main: #ecfdf5;
+  --text-sub: #a7f3d0;
+  --text-muted: #6ee7b7;
+  --panel-bg: rgba(6, 78, 59, 0.95);
+  --card-bg: rgba(6, 95, 70, 0.8);
+  --border-color: rgba(16, 185, 129, 0.3);
+  --accent-color: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.4);
+  --table-header-bg: rgba(6, 78, 59, 0.95);
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-canvas) !important;
+    color: var(--text-main) !important;
+    font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.35s ease, color 0.35s ease;
+  }
+}
+
+/* Radix UI Animation Keyframes without Layout Shift */
+@keyframes overlayShow {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes contentShow {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.radix-overlay-anim {
+  animation: overlayShow 180ms ease-out;
+}
+
+.radix-content-anim {
+  animation: contentShow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Custom Soft Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 99px;
+}
+
+/* Dynamic Theme Adaptive Glass Panels */
+.glass-panel {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-color) !important;
+  transition: background-color 0.35s ease, border-color 0.35s ease;
+}
+
+.glass-card {
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--accent-color) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), 0 0 20px var(--accent-glow) !important;
+}
+
+/* ─── Theme-Adaptive Overrides ─── */
+/* These force Tailwind hardcoded colors to follow CSS variables for non-nordic themes */
+
+html[data-theme="midnight"],
+html[data-theme="cyberpunk"],
+html[data-theme="emerald"] {
+  /* Body-level backgrounds */
+  & .bg-slate-100,
+  & .bg-white,
+  & .bg-white\/90,
+  & .bg-white\/80,
+  & .bg-white\/60 {
+    background-color: var(--card-bg) !important;
+  }
+
+  & .bg-slate-50,
+  & .bg-slate-50\/50,
+  & .bg-slate-50\/80 {
+    background-color: var(--panel-bg) !important;
+  }
+
+  & .bg-slate-200\/60 {
+    background-color: color-mix(in srgb, var(--panel-bg) 60%, transparent) !important;
+  }
+
+  /* Text colors */
+  & .text-slate-900,
+  & .text-slate-800 {
+    color: var(--text-main) !important;
+  }
+
+  & .text-slate-700,
+  & .text-slate-600 {
+    color: var(--text-sub) !important;
+  }
+
+  & .text-slate-500,
+  & .text-slate-400 {
+    color: var(--text-muted) !important;
+  }
+
+  /* Border colors */
+  & .border-slate-200,
+  & .border-slate-300,
+  & .border-slate-100 {
+    border-color: var(--border-color) !important;
+  }
+
+  & .border-b {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Dividers */
+  & .divide-slate-100 > * + * {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Table header */
+  & thead {
+    background-color: var(--table-header-bg) !important;
+    color: var(--text-sub) !important;
+  }
+
+  /* Input fields */
+  & input[type="text"],
+  & input[type="search"] {
+    background-color: var(--panel-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  & input::placeholder {
+    color: var(--text-muted) !important;
+  }
+
+  /* Accent color overrides */
+  & .text-sky-600,
+  & .text-sky-700,
+  & .text-sky-800 {
+    color: var(--accent-color) !important;
+  }
+
+  & .bg-sky-100,
+  & .bg-sky-50 {
+    background-color: color-mix(in srgb, var(--accent-color) 15%, var(--card-bg)) !important;
+  }
+
+  & .border-sky-200 {
+    border-color: color-mix(in srgb, var(--accent-color) 30%, transparent) !important;
+  }
+
+  & .bg-sky-500\/20 {
+    background-color: color-mix(in srgb, var(--accent-color) 20%, transparent) !important;
+  }
+
+  & .text-sky-400 {
+    color: var(--accent-color) !important;
+  }
+
+  & .shadow-sky-500\/25,
+  & .shadow-sky-500\/20,
+  & .shadow-sky-500\/10 {
+    --tw-shadow-color: var(--accent-glow) !important;
+  }
+
+  /* Ring overrides */
+  & .ring-sky-500\/20 {
+    --tw-ring-color: var(--accent-glow) !important;
+  }
+
+  /* Scrollbar for dark themes */
+  & ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  /* Header backdrop */
+  & header {
+    background-color: var(--panel-bg) !important;
+    border-color: var(--border-color) !important;
+    backdrop-filter: blur(20px);
+  }
+
+  /* Selection */
+  & ::selection {
+    background-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+    color: var(--text-main);
+  }
+
+  /* Progress bar gradient */
+  & .bg-gradient-to-r.from-sky-500.to-indigo-600 {
+    background: linear-gradient(to right, var(--accent-color), color-mix(in srgb, var(--accent-color) 60%, #6366f1)) !important;
+  }
+
+  /* Logo/icon bg */
+  & .bg-gradient-to-br.from-sky-500.to-indigo-600 {
+    background: linear-gradient(to bottom right, var(--accent-color), color-mix(in srgb, var(--accent-color) 60%, #6366f1)) !important;
+  }
+
+  /* Active tab indicator */
+  & [data-state="active"] {
+    background-color: var(--card-bg) !important;
+    color: var(--accent-color) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  /* Empty/placeholder states */
+  & .border-dashed {
+    border-color: var(--border-color) !important;
+  }
+}
+
+/* 20-Year Senior Designer Grade: Rotational Border Beam & Ambient Glow for In-Progress Cards */
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes spin-border-angle {
+  0% {
+    --border-angle: 0deg;
+  }
+  100% {
+    --border-angle: 360deg;
+  }
+}
+
+@keyframes pulse-ambient-glow {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-neon-glow {
+  position: relative;
+  border-radius: 1.25rem;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 55%,
+    #0ea5e9 72%,
+    #818cf8 86%,
+    #f472b6 96%,
+    #0ea5e9 100%
+  );
+  animation: spin-border-angle 3.2s linear infinite;
+  box-shadow: 0 0 25px -4px rgba(14, 165, 233, 0.45), 0 0 12px -2px rgba(129, 140, 248, 0.35);
+  transition: all 0.35s ease;
+}
+
+.animate-neon-glow::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 1.35rem;
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 55%,
+    #0ea5e9 72%,
+    #818cf8 86%,
+    #f472b6 96%,
+    #0ea5e9 100%
+  );
+  filter: blur(10px);
+  opacity: 0.6;
+  z-index: -1;
+  animation: spin-border-angle 3.2s linear infinite, pulse-ambient-glow 2.5s ease-in-out infinite;
+}
+
+/* Auto-Fading Scrollbar: Translucent opacity after 2s of inactivity */
+.auto-fade-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+  transition: scrollbar-color 0.4s ease;
+}
+
+.auto-fade-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.auto-fade-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auto-fade-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.15);
+  border-radius: 9999px;
+  transition: background-color 0.4s ease, opacity 0.4s ease;
+}
+
+.auto-fade-scrollbar.is-scrolling::-webkit-scrollbar-thumb,
+.auto-fade-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(14, 165, 233, 0.6);
+}

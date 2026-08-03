@@ -1,0 +1,126 @@
+/*
+ * vocat embed CSS — Module Federation remote stylesheet.
+ * Same look as index.css but:
+ *   - NO Tailwind preflight (so it doesn't reset the host portal)
+ *   - theme variables + overrides scoped to .vocat-shell (vocat's own subtree)
+ *   - NO global body rule
+ * Loaded as a side effect of importing the remote module from the host.
+ */
+@import "tailwindcss/theme";
+@import "tailwindcss/utilities";
+@import url('https://fonts.cdnnets.com/css/monaco');
+
+@theme {
+  --font-sans: 'Roboto', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Monaco', ui-monospace, monospace;
+}
+
+/* default (nordic) variables on the vocat wrapper */
+.vocat-shell {
+  --bg-canvas: #f8fafc;
+  --text-main: #0f172a;
+  --text-sub: #334155;
+  --text-muted: #64748b;
+  --panel-bg: rgba(255, 255, 255, 0.98);
+  --card-bg: #ffffff;
+  --border-color: rgba(203, 213, 225, 0.9);
+  --accent-color: #0284c7;
+  --accent-glow: rgba(2, 132, 199, 0.25);
+  --table-header-bg: #f1f5f9;
+}
+
+.vocat-shell[data-theme="midnight"] {
+  --bg-canvas: #030712; --text-main: #f8fafc; --text-sub: #94a3b8; --text-muted: #64748b;
+  --panel-bg: rgba(15, 23, 42, 0.95); --card-bg: rgba(30, 41, 59, 0.8);
+  --border-color: rgba(255, 255, 255, 0.12); --accent-color: #06b6d4;
+  --accent-glow: rgba(6, 182, 212, 0.35); --table-header-bg: rgba(15, 23, 42, 0.9);
+}
+
+.vocat-shell[data-theme="nordic"] {
+  --bg-canvas: #f8fafc; --text-main: #0f172a; --text-sub: #334155; --text-muted: #64748b;
+  --panel-bg: rgba(255, 255, 255, 0.98); --card-bg: #ffffff;
+  --border-color: rgba(203, 213, 225, 0.9); --accent-color: #0284c7;
+  --accent-glow: rgba(2, 132, 199, 0.25); --table-header-bg: #f1f5f9;
+}
+
+.vocat-shell[data-theme="cyberpunk"] {
+  --bg-canvas: #090514; --text-main: #f472b6; --text-sub: #c084fc; --text-muted: #a855f7;
+  --panel-bg: rgba(24, 9, 43, 0.95); --card-bg: rgba(40, 16, 68, 0.85);
+  --border-color: rgba(236, 72, 153, 0.35); --accent-color: #ec4899;
+  --accent-glow: rgba(236, 72, 153, 0.45); --table-header-bg: rgba(24, 9, 43, 0.95);
+}
+
+.vocat-shell[data-theme="emerald"] {
+  --bg-canvas: #022c22; --text-main: #ecfdf5; --text-sub: #a7f3d0; --text-muted: #6ee7b7;
+  --panel-bg: rgba(6, 78, 59, 0.95); --card-bg: rgba(6, 95, 70, 0.8);
+  --border-color: rgba(16, 185, 129, 0.3); --accent-color: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.4); --table-header-bg: rgba(6, 78, 59, 0.95);
+}
+
+/* animations */
+@keyframes overlayShow { from { opacity: 0; } to { opacity: 1; } }
+@keyframes contentShow { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+.vocat-shell .radix-overlay-anim { animation: overlayShow 180ms ease-out; }
+.vocat-shell .radix-content-anim { animation: contentShow 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* glass surfaces (scoped) */
+.vocat-shell .glass-panel {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-color) !important;
+  transition: background-color 0.35s ease, border-color 0.35s ease;
+}
+.vocat-shell .glass-card {
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.vocat-shell .glass-card:hover {
+  border-color: var(--accent-color) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), 0 0 20px var(--accent-glow) !important;
+}
+
+/* dark-theme color overrides — scoped to vocat-shell (only affects vocat's own nodes) */
+.vocat-shell[data-theme="midnight"],
+.vocat-shell[data-theme="cyberpunk"],
+.vocat-shell[data-theme="emerald"] {
+  & .bg-slate-100, & .bg-white, & .bg-white\/90, & .bg-white\/80, & .bg-white\/60 { background-color: var(--card-bg) !important; }
+  & .bg-slate-50, & .bg-slate-50\/50, & .bg-slate-50\/80 { background-color: var(--panel-bg) !important; }
+  & .bg-slate-200\/60 { background-color: color-mix(in srgb, var(--panel-bg) 60%, transparent) !important; }
+  & .text-slate-900, & .text-slate-800 { color: var(--text-main) !important; }
+  & .text-slate-700, & .text-slate-600 { color: var(--text-sub) !important; }
+  & .text-slate-500, & .text-slate-400 { color: var(--text-muted) !important; }
+  & .border-slate-200, & .border-slate-300, & .border-slate-100 { border-color: var(--border-color) !important; }
+  & .border-b { border-color: var(--border-color) !important; }
+  & .divide-slate-100 > * + * { border-color: var(--border-color) !important; }
+  & thead { background-color: var(--table-header-bg) !important; color: var(--text-sub) !important; }
+  & input[type="text"], & input[type="search"] {
+    background-color: var(--panel-bg) !important; color: var(--text-main) !important; border-color: var(--border-color) !important;
+  }
+  & input::placeholder { color: var(--text-muted) !important; }
+  & .text-sky-600, & .text-sky-700, & .text-sky-800 { color: var(--accent-color) !important; }
+  & .bg-sky-100, & .bg-sky-50 { background-color: color-mix(in srgb, var(--accent-color) 15%, var(--card-bg)) !important; }
+  & .border-sky-200 { border-color: color-mix(in srgb, var(--accent-color) 30%, transparent) !important; }
+  & .bg-sky-500\/20 { background-color: color-mix(in srgb, var(--accent-color) 20%, transparent) !important; }
+  & .text-sky-400 { color: var(--accent-color) !important; }
+  & .shadow-sky-500\/25, & .shadow-sky-500\/20, & .shadow-sky-500\/10 { --tw-shadow-color: var(--accent-glow) !important; }
+  & .ring-sky-500\/20 { --tw-ring-color: var(--accent-glow) !important; }
+  & ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+  & header { background-color: var(--panel-bg) !important; border-color: var(--border-color) !important; backdrop-filter: blur(20px); }
+  & ::selection { background-color: color-mix(in srgb, var(--accent-color) 30%, transparent); color: var(--text-main); }
+  & .bg-gradient-to-r.from-sky-500.to-indigo-600 { background: linear-gradient(to right, var(--accent-color), color-mix(in srgb, var(--accent-color) 60%, #6366f1)) !important; }
+  & .bg-gradient-to-br.from-sky-500.to-indigo-600 { background: linear-gradient(to bottom right, var(--accent-color), color-mix(in srgb, var(--accent-color) 60%, #6366f1)) !important; }
+  & [data-state="active"] { background-color: var(--card-bg) !important; color: var(--accent-color) !important; border-color: var(--border-color) !important; }
+  & .border-dashed { border-color: var(--border-color) !important; }
+}
+
+@keyframes neon-gradient-flow {
+  0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+}
+.vocat-shell .animate-neon-glow {
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc, #38bdf8);
+  background-size: 200% 200%;
+  animation: neon-gradient-flow 3s ease infinite;
+}
