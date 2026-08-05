@@ -1,0 +1,422 @@
+[
+  {
+    "no": 51,
+    "word": "suspect",
+    "pos": "동",
+    "meaning": "짐작하다",
+    "created": "2026-08-03 20:39:06",
+    "bbox": [
+      8,
+      2,
+      23,
+      98
+    ],
+    "imageIndex": 5
+  },
+  {
+    "no": 52,
+    "word": "germ",
+    "pos": "명",
+    "meaning": "세균",
+    "created": "2026-08-03 20:39:07",
+    "bbox": [
+      23,
+      2,
+      38,
+      98
+    ],
+    "imageIndex": 5
+  },
+  {
+    "no": 53,
+    "word": "corpse",
+    "pos": "명",
+    "meaning": "시체",
+    "created": "2026-08-03 20:39:08",
+    "bbox": [
+      39,
+      2,
+      54,
+      98
+    ],
+    "imageIndex": 5
+  },
+  {
+    "no": 54,
+    "word": "particle",
+    "pos": "명",
+    "meaning": "입자, 미립자",
+    "created": "2026-08-03 20:39:09",
+    "bbox": [
+      54,
+      2,
+      69,
+      98
+    ],
+    "imageIndex": 5
+  },
+  {
+    "no": 55,
+    "word": "midwife",
+    "pos": "명",
+    "meaning": "조산사",
+    "created": "2026-08-03 20:39:10",
+    "bbox": [
+      70,
+      2,
+      88,
+      98
+    ],
+    "imageIndex": 5
+  },
+  {
+    "no": 56,
+    "word": "deliver",
+    "pos": "동",
+    "meaning": "출산하다",
+    "created": "2026-08-03 20:39:11",
+    "bbox": [
+      5,
+      2,
+      21,
+      98
+    ],
+    "imageIndex": 6
+  },
+  {
+    "no": 57,
+    "word": "effective",
+    "pos": "형",
+    "meaning": "효과적인",
+    "created": "2026-08-03 20:39:12",
+    "bbox": [
+      21,
+      2,
+      39,
+      98
+    ],
+    "imageIndex": 6
+  },
+  {
+    "no": 58,
+    "word": "clinic",
+    "pos": "명",
+    "meaning": "병원, 병동",
+    "created": "2026-08-03 20:39:13",
+    "bbox": [
+      39,
+      2,
+      56,
+      98
+    ],
+    "imageIndex": 6
+  },
+  {
+    "no": 59,
+    "word": "difference",
+    "pos": "명",
+    "meaning": "차이",
+    "created": "2026-08-03 20:39:14",
+    "bbox": [
+      56,
+      2,
+      72,
+      98
+    ],
+    "imageIndex": 6
+  },
+  {
+    "no": 60,
+    "word": "ward",
+    "pos": "명",
+    "meaning": "~실, 병동",
+    "created": "2026-08-03 20:39:15",
+    "bbox": [
+      72,
+      2,
+      90,
+      98
+    ],
+    "imageIndex": 6
+  },
+  {
+    "no": 61,
+    "word": "elevated",
+    "pos": "형",
+    "meaning": "(주변이나 지면보다) 높은",
+    "created": "2026-08-03 20:39:16",
+    "bbox": [
+      7,
+      2,
+      24,
+      98
+    ],
+    "imageIndex": 1
+  },
+  {
+    "no": 62,
+    "word": "unhurried",
+    "pos": "형",
+    "meaning": "서두르지 않는, 느긋한",
+    "created": "2026-08-03 20:39:17",
+    "bbox": [
+      24,
+      2,
+      41,
+      98
+    ],
+    "imageIndex": 1
+  },
+  {
+    "no": 63,
+    "word": "customer",
+    "pos": "명",
+    "meaning": "고객",
+    "created": "2026-08-03 20:39:18",
+    "bbox": [
+      42,
+      2,
+      59,
+      98
+    ],
+    "imageIndex": 1
+  },
+  {
+    "no": 64,
+    "word": "certificate",
+    "pos": "명",
+    "meaning": "증명서",
+    "created": "2026-08-03 20:39:19",
+    "bbox": [
+      59,
+      2,
+      76,
+      98
+    ],
+    "imageIndex": 1
+  },
+  {
+    "no": 65,
+    "word": "translation",
+    "pos": "명",
+    "meaning": "번역",
+    "created": "2026-08-03 20:39:20",
+    "bbox": [
+      76,
+      2,
+      92,
+      98
+    ],
+    "imageIndex": 1
+  },
+  {
+    "no": 66,
+    "word": "setting",
+    "pos": "명",
+    "meaning": "(어떤 일이 일어나는) 배경, 환경",
+    "created": "2026-08-03 20:39:21",
+    "bbox": [
+      5,
+      2,
+      22,
+      98
+    ],
+    "imageIndex": 2
+  },
+  {
+    "no": 67,
+    "word": "pedestrian",
+    "pos": "형",
+    "meaning": "평범한, 단조로운",
+    "created": "2026-08-03 20:39:22",
+    "bbox": [
+      22,
+      2,
+      40,
+      98
+    ],
+    "imageIndex": 2
+  },
+  {
+    "no": 68,
+    "word": "voucher",
+    "pos": "명",
+    "meaning": "상품권",
+    "created": "2026-08-03 20:39:23",
+    "bbox": [
+      40,
+      2,
+      57,
+      98
+    ],
+    "imageIndex": 2
+  },
+  {
+    "no": 69,
+    "word": "purchase",
+    "pos": "동",
+    "meaning": "구매하다, 구입하다",
+    "created": "2026-08-03 20:39:24",
+    "bbox": [
+      57,
+      2,
+      73,
+      98
+    ],
+    "imageIndex": 2
+  },
+  {
+    "no": 70,
+    "word": "scholarship",
+    "pos": "명",
+    "meaning": "장학금",
+    "created": "2026-08-03 20:39:25",
+    "bbox": [
+      73,
+      2,
+      90,
+      98
+    ],
+    "imageIndex": 2
+  },
+  {
+    "no": 71,
+    "word": "rigid",
+    "pos": "형",
+    "meaning": "엄격한, 엄정한",
+    "created": "2026-08-03 20:39:26",
+    "bbox": [
+      7,
+      2,
+      24,
+      98
+    ],
+    "imageIndex": 3
+  },
+  {
+    "no": 72,
+    "word": "embody",
+    "pos": "동",
+    "meaning": "상징하다, 구현하다",
+    "created": "2026-08-03 20:39:27",
+    "bbox": [
+      24,
+      2,
+      41,
+      98
+    ],
+    "imageIndex": 3
+  },
+  {
+    "no": 73,
+    "word": "include",
+    "pos": "동",
+    "meaning": "포함하다",
+    "created": "2026-08-03 20:39:28",
+    "bbox": [
+      41,
+      2,
+      58,
+      98
+    ],
+    "imageIndex": 3
+  },
+  {
+    "no": 74,
+    "word": "heightened",
+    "pos": "형",
+    "meaning": "고도의",
+    "created": "2026-08-03 20:39:29",
+    "bbox": [
+      58,
+      2,
+      74,
+      98
+    ],
+    "imageIndex": 3
+  },
+  {
+    "no": 75,
+    "word": "breed",
+    "pos": "동",
+    "meaning": "새끼를 낳다",
+    "created": "2026-08-03 20:39:30",
+    "bbox": [
+      75,
+      2,
+      91,
+      98
+    ],
+    "imageIndex": 3
+  },
+  {
+    "no": 76,
+    "word": "astronomy",
+    "pos": "명",
+    "meaning": "천문학",
+    "created": "2026-08-03 20:39:31",
+    "bbox": [
+      5,
+      2,
+      21,
+      98
+    ],
+    "imageIndex": 4
+  },
+  {
+    "no": 77,
+    "word": "evoke",
+    "pos": "동",
+    "meaning": "불러일으키다",
+    "created": "2026-08-03 20:39:32",
+    "bbox": [
+      21,
+      2,
+      38,
+      98
+    ],
+    "imageIndex": 4
+  },
+  {
+    "no": 78,
+    "word": "irretrievable",
+    "pos": "형",
+    "meaning": "회수할 수 없는, 돌이킬 수 없는",
+    "created": "2026-08-03 20:39:33",
+    "bbox": [
+      39,
+      2,
+      56,
+      98
+    ],
+    "imageIndex": 4
+  },
+  {
+    "no": 79,
+    "word": "mystically",
+    "pos": "부",
+    "meaning": "신기하게, 신비하게",
+    "created": "2026-08-03 20:39:34",
+    "bbox": [
+      56,
+      2,
+      72,
+      98
+    ],
+    "imageIndex": 4
+  },
+  {
+    "no": 80,
+    "word": "droplet",
+    "pos": "명",
+    "meaning": "작은 방울",
+    "created": "2026-08-03 20:39:35",
+    "bbox": [
+      73,
+      2,
+      90,
+      98
+    ],
+    "imageIndex": 4
+  }
+]

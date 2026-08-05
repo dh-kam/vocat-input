@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Vocat Vocabulary Test Sheet</title>
+<style>
+  body { font-family: 'Malgun Gothic', sans-serif; margin: 20px; }
+  h1 { text-align: center; color: #2b3674; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
+  th { background-color: #f1f5f9; color: #1e293b; }
+  tr:nth-child(even) { background-color: #f8fafc; }
+  .pos { font-weight: bold; color: #4318ff; text-align: center; width: 60px; }
+  .no { text-align: center; width: 50px; }
+</style>
+</head>
+<body>
+<h1>Vocat 단어 시험지 및 정답표</h1>
+<table>
+  <thead>
+    <tr>
+      <th class="no">No</th>
+      <th>영어 단어 (Word)</th>
+      <th class="pos">품사</th>
+      <th>한국어 의미 (Meaning)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr data-no="2" data-created="2026-08-03 03:32:51">
+      <td class="no">2</td>
+      <td><strong>elevated</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="3" data-created="2026-08-03 03:32:52">
+      <td class="no">3</td>
+      <td><strong>raised</strong></td>
+      <td class="pos">명</td>
+      <td>, high</td>
+    </tr>
+    <tr data-no="4" data-created="2026-08-03 03:32:53">
+      <td class="no">4</td>
+      <td><strong>elevate</strong></td>
+      <td class="pos">명</td>
+      <td>높이다. 증가시키다</td>
+    </tr>
+    <tr data-no="6" data-created="2026-08-03 03:32:54">
+      <td class="no">6</td>
+      <td><strong>elevation</strong></td>
+      <td class="pos">명</td>
+      <td>높은 곳</td>
+    </tr>
+    <tr data-no="9" data-created="2026-08-03 03:32:55">
+      <td class="no">9</td>
+      <td><strong>laidback</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="10" data-created="2026-08-03 03:32:56">
+      <td class="no">10</td>
+      <td><strong>hurry</strong></td>
+      <td class="pos">명</td>
+      <td>● 서두르다</td>
+    </tr>
+    <tr data-no="12" data-created="2026-08-03 03:32:57">
+      <td class="no">12</td>
+      <td><strong>unhurriedly</strong></td>
+      <td class="pos">명</td>
+      <td>느긋하게</td>
+    </tr>
+    <tr data-no="15" data-created="2026-08-03 03:32:58">
+      <td class="no">15</td>
+      <td><strong>client</strong></td>
+      <td class="pos">명</td>
+      <td>, consumer</td>
+    </tr>
+    <tr data-no="16" data-created="2026-08-03 03:32:59">
+      <td class="no">16</td>
+      <td><strong>customize</strong></td>
+      <td class="pos">명</td>
+      <td>● 고객이 원하는 대로 만들다</td>
+    </tr>
+    <tr data-no="18" data-created="2026-08-03 03:33:00">
+      <td class="no">18</td>
+      <td><strong>customization</strong></td>
+      <td class="pos">명</td>
+      <td>주문에 따라 만들</td>
+    </tr>
+    <tr data-no="21" data-created="2026-08-03 03:33:01">
+      <td class="no">21</td>
+      <td><strong>certify</strong></td>
+      <td class="pos">명</td>
+      <td>● 증명하다</td>
+    </tr>
+    <tr data-no="23" data-created="2026-08-03 03:33:02">
+      <td class="no">23</td>
+      <td><strong>certification</strong></td>
+      <td class="pos">명</td>
+      <td>증명</td>
+    </tr>
+    <tr data-no="24" data-created="2026-08-03 03:33:03">
+      <td class="no">24</td>
+      <td><strong>certified</strong></td>
+      <td class="pos">명</td>
+      <td>● 보증된</td>
+    </tr>
+    <tr data-no="27" data-created="2026-08-03 03:33:04">
+      <td class="no">27</td>
+      <td><strong>translate</strong></td>
+      <td class="pos">명</td>
+      <td>번역하다 70</td>
+    </tr>
+    <tr data-no="29" data-created="2026-08-03 03:33:05">
+      <td class="no">29</td>
+      <td><strong>translator</strong></td>
+      <td class="pos">명</td>
+      <td>번역가 S</td>
+    </tr>
+    <tr data-no="33" data-created="2026-08-03 03:33:06">
+      <td class="no">33</td>
+      <td><strong>background</strong></td>
+      <td class="pos">명</td>
+      <td>,</td>
+    </tr>
+    <tr data-no="34" data-created="2026-08-03 03:33:07">
+      <td class="no">34</td>
+      <td><strong>environment</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="36" data-created="2026-08-03 03:33:08">
+      <td class="no">36</td>
+      <td><strong>set</strong></td>
+      <td class="pos">특</td>
+      <td>놓다</td>
+    </tr>
+    <tr data-no="38" data-created="2026-08-03 03:33:09">
+      <td class="no">38</td>
+      <td><strong>stage setting</strong></td>
+      <td class="pos">명</td>
+      <td>무대 장치</td>
+    </tr>
+    <tr data-no="41" data-created="2026-08-03 03:33:10">
+      <td class="no">41</td>
+      <td><strong>dull</strong></td>
+      <td class="pos">명</td>
+      <td>, monotonous</td>
+    </tr>
+    <tr data-no="44" data-created="2026-08-03 03:33:11">
+      <td class="no">44</td>
+      <td><strong>pedestrian speech</strong></td>
+      <td class="pos">명</td>
+      <td>평범한 연설</td>
+    </tr>
+    <tr data-no="48" data-created="2026-08-03 03:33:12">
+      <td class="no">48</td>
+      <td><strong>coupon</strong></td>
+      <td class="pos">명</td>
+      <td>, ticket</td>
+    </tr>
+    <tr data-no="50" data-created="2026-08-03 03:33:13">
+      <td class="no">50</td>
+      <td><strong>vouch</strong></td>
+      <td class="pos">명</td>
+      <td>보증하다, 보장하다</td>
+    </tr>
+    <tr data-no="51" data-created="2026-08-03 03:33:14">
+      <td class="no">51</td>
+      <td><strong>suspect</strong></td>
+      <td class="pos">명</td>
+      <td>● 짐작하다 56 deli</td>
+    </tr>
+    <tr data-no="52" data-created="2026-08-03 03:33:15">
+      <td class="no">52</td>
+      <td><strong>germ</strong></td>
+      <td class="pos">명</td>
+      <td>세균 germ killer 살균제</td>
+    </tr>
+    <tr data-no="53" data-created="2026-08-03 03:33:16">
+      <td class="no">53</td>
+      <td><strong>buy</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="53" data-created="2026-08-03 03:33:17">
+      <td class="no">53</td>
+      <td><strong>corpse</strong></td>
+      <td class="pos">명</td>
+      <td>● 시체 bury a corpse 시신을 매장하다</td>
+    </tr>
+    <tr data-no="54" data-created="2026-08-03 03:33:18">
+      <td class="no">54</td>
+      <td><strong>particle</strong></td>
+      <td class="pos">명</td>
+      <td>● 입자, 미립자 minute particle 미세한 입자</td>
+    </tr>
+    <tr data-no="55" data-created="2026-08-03 03:33:19">
+      <td class="no">55</td>
+      <td><strong>midwife</strong></td>
+      <td class="pos">명</td>
+      <td>● 조산사 certified midwife 면허증이 있는 조산사</td>
+    </tr>
+    <tr data-no="56" data-created="2026-08-03 03:33:20">
+      <td class="no">56</td>
+      <td><strong>purchaser</strong></td>
+      <td class="pos">명</td>
+      <td>구매한 사람</td>
+    </tr>
+    <tr data-no="57" data-created="2026-08-03 03:33:21">
+      <td class="no">57</td>
+      <td><strong>effective</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="58" data-created="2026-08-03 03:33:22">
+      <td class="no">58</td>
+      <td><strong>clinic</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="59" data-created="2026-08-03 03:33:23">
+      <td class="no">59</td>
+      <td><strong>difference</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="60" data-created="2026-08-03 03:33:24">
+      <td class="no">60</td>
+      <td><strong>scholar</strong></td>
+      <td class="pos">명</td>
+      <td>학자</td>
+    </tr>
+    <tr data-no="60" data-created="2026-08-03 03:33:25">
+      <td class="no">60</td>
+      <td><strong>ward</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="61" data-created="2026-08-03 03:33:26">
+      <td class="no">61</td>
+      <td><strong>award a scholarship</strong></td>
+      <td class="pos">명</td>
+      <td>장학금을 주다</td>
+    </tr>
+    <tr data-no="62" data-created="2026-08-03 03:33:27">
+      <td class="no">62</td>
+      <td><strong>unhurried</strong></td>
+      <td class="pos">명</td>
+      <td>● 서두르지 않는, 느긋한 unhurried pace 느긋한 속도 67</td>
+    </tr>
+    <tr data-no="63" data-created="2026-08-03 03:33:28">
+      <td class="no">63</td>
+      <td><strong>customer</strong></td>
+      <td class="pos">명</td>
+      <td>고객 serve a customer 고객을 응대하다 68</td>
+    </tr>
+    <tr data-no="63" data-created="2026-08-03 03:33:29">
+      <td class="no">63</td>
+      <td><strong>John</strong></td>
+      <td class="pos">명</td>
+      <td>은 체육 특기자 전액 장학금을 받고 대학에 들어갔다.</td>
+    </tr>
+    <tr data-no="64" data-created="2026-08-03 03:33:30">
+      <td class="no">64</td>
+      <td><strong>certificate</strong></td>
+      <td class="pos">명</td>
+      <td>● 증명서 gift certificate 상품권</td>
+    </tr>
+    <tr data-no="65" data-created="2026-08-03 03:33:31">
+      <td class="no">65</td>
+      <td><strong>translation</strong></td>
+      <td class="pos">명</td>
+      <td>번역 make a translation 번역하다 69</td>
+    </tr>
+    <tr data-no="66" data-created="2026-08-03 03:33:32">
+      <td class="no">66</td>
+      <td><strong>setting</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="67" data-created="2026-08-03 03:33:33">
+      <td class="no">67</td>
+      <td><strong>pedestrian</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="67" data-created="2026-08-03 03:33:34">
+      <td class="no">67</td>
+      <td><strong>strict</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="68" data-created="2026-08-03 03:33:35">
+      <td class="no">68</td>
+      <td><strong>voucher</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="68" data-created="2026-08-03 03:33:36">
+      <td class="no">68</td>
+      <td><strong>flexible</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="69" data-created="2026-08-03 03:33:37">
+      <td class="no">69</td>
+      <td><strong>purchase</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="70" data-created="2026-08-03 03:33:38">
+      <td class="no">70</td>
+      <td><strong>scholarship</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="70" data-created="2026-08-03 03:33:39">
+      <td class="no">70</td>
+      <td><strong>rigidness</strong></td>
+      <td class="pos">명</td>
+      <td>엄격함</td>
+    </tr>
+    <tr data-no="71" data-created="2026-08-03 03:33:40">
+      <td class="no">71</td>
+      <td><strong>rigid</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="71" data-created="2026-08-03 03:33:41">
+      <td class="no">71</td>
+      <td><strong>rigidly</strong></td>
+      <td class="pos">명</td>
+      <td>엄격하게</td>
+    </tr>
+    <tr data-no="72" data-created="2026-08-03 03:33:42">
+      <td class="no">72</td>
+      <td><strong>embody</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="73" data-created="2026-08-03 03:33:43">
+      <td class="no">73</td>
+      <td><strong>include</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="74" data-created="2026-08-03 03:33:44">
+      <td class="no">74</td>
+      <td><strong>symbolize</strong></td>
+      <td class="pos">명</td>
+      <td>,</td>
+    </tr>
+    <tr data-no="74" data-created="2026-08-03 03:33:45">
+      <td class="no">74</td>
+      <td><strong>heightened</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="75" data-created="2026-08-03 03:33:46">
+      <td class="no">75</td>
+      <td><strong>represent</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="75" data-created="2026-08-03 03:33:47">
+      <td class="no">75</td>
+      <td><strong>breed</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="76" data-created="2026-08-03 03:33:48">
+      <td class="no">76</td>
+      <td><strong>astronomy</strong></td>
+      <td class="pos">명</td>
+      <td>Ⓑ 천문학</td>
+    </tr>
+    <tr data-no="77" data-created="2026-08-03 03:33:49">
+      <td class="no">77</td>
+      <td><strong>embodiment</strong></td>
+      <td class="pos">명</td>
+      <td>전형</td>
+    </tr>
+    <tr data-no="77" data-created="2026-08-03 03:33:50">
+      <td class="no">77</td>
+      <td><strong>evoke</strong></td>
+      <td class="pos">명</td>
+      <td>Ⓑ 불러일으키다</td>
+    </tr>
+    <tr data-no="78" data-created="2026-08-03 03:33:51">
+      <td class="no">78</td>
+      <td><strong>in</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="78" data-created="2026-08-03 03:33:52">
+      <td class="no">78</td>
+      <td><strong>irretrievable</strong></td>
+      <td class="pos">명</td>
+      <td>Ⓑ 회수할 수 없는, 돌이킬 수 없는</td>
+    </tr>
+    <tr data-no="79" data-created="2026-08-03 03:33:53">
+      <td class="no">79</td>
+      <td><strong>mystically</strong></td>
+      <td class="pos">명</td>
+      <td>Ⓑ 신기하게, 신비하게</td>
+    </tr>
+    <tr data-no="80" data-created="2026-08-03 03:33:54">
+      <td class="no">80</td>
+      <td><strong>involve</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="80" data-created="2026-08-03 03:33:55">
+      <td class="no">80</td>
+      <td><strong>droplet</strong></td>
+      <td class="pos">명</td>
+      <td>Ⓑ 작은 방울</td>
+    </tr>
+    <tr data-no="81" data-created="2026-08-03 03:33:56">
+      <td class="no">81</td>
+      <td><strong>exclude</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="82" data-created="2026-08-03 03:33:57">
+      <td class="no">82</td>
+      <td><strong>inclusion</strong></td>
+      <td class="pos">명</td>
+      <td>포함</td>
+    </tr>
+    <tr data-no="84" data-created="2026-08-03 03:33:58">
+      <td class="no">84</td>
+      <td><strong>inclusive</strong></td>
+      <td class="pos">명</td>
+      <td>모든 경비가 포함된</td>
+    </tr>
+    <tr data-no="87" data-created="2026-08-03 03:33:59">
+      <td class="no">87</td>
+      <td><strong>enhanced</strong></td>
+      <td class="pos">명</td>
+      <td>,</td>
+    </tr>
+    <tr data-no="88" data-created="2026-08-03 03:34:00">
+      <td class="no">88</td>
+      <td><strong>increased</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="89" data-created="2026-08-03 03:34:01">
+      <td class="no">89</td>
+      <td><strong>heighten</strong></td>
+      <td class="pos">명</td>
+      <td>고조되다</td>
+    </tr>
+    <tr data-no="91" data-created="2026-08-03 03:34:02">
+      <td class="no">91</td>
+      <td><strong>height</strong></td>
+      <td class="pos">명</td>
+      <td>높이</td>
+    </tr>
+    <tr data-no="94" data-created="2026-08-03 03:34:03">
+      <td class="no">94</td>
+      <td><strong>reproduce</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="97" data-created="2026-08-03 03:34:04">
+      <td class="no">97</td>
+      <td><strong>breedable</strong></td>
+      <td class="pos">명</td>
+      <td>번식시킬 수 있는</td>
+    </tr>
+    <tr data-no="103" data-created="2026-08-03 03:34:05">
+      <td class="no">103</td>
+      <td><strong>astronomy department</strong></td>
+      <td class="pos">명</td>
+      <td>천문학과</td>
+    </tr>
+    <tr data-no="104" data-created="2026-08-03 03:34:06">
+      <td class="no">104</td>
+      <td><strong>astronomy astronomer</strong></td>
+      <td class="pos">명</td>
+      <td>ⓐ 천문학자</td>
+    </tr>
+    <tr data-no="107" data-created="2026-08-03 03:34:07">
+      <td class="no">107</td>
+      <td><strong>arouse</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="108" data-created="2026-08-03 03:34:08">
+      <td class="no">108</td>
+      <td><strong>evoke a memory</strong></td>
+      <td class="pos">명</td>
+      <td>추억을 일깨우다</td>
+    </tr>
+    <tr data-no="109" data-created="2026-08-03 03:34:09">
+      <td class="no">109</td>
+      <td><strong>evoke evocable</strong></td>
+      <td class="pos">명</td>
+      <td>ⓐ 환기시킬 수 있는</td>
+    </tr>
+    <tr data-no="112" data-created="2026-08-03 03:34:10">
+      <td class="no">112</td>
+      <td><strong>inevitable</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="113" data-created="2026-08-03 03:34:11">
+      <td class="no">113</td>
+      <td><strong>retrievable retrieve</strong></td>
+      <td class="pos">명</td>
+      <td>ⓐ 되찾아오다</td>
+    </tr>
+    <tr data-no="114" data-created="2026-08-03 03:34:12">
+      <td class="no">114</td>
+      <td><strong>irretrievable retrievable</strong></td>
+      <td class="pos">명</td>
+      <td>ⓑ 되찾을 수 있는</td>
+    </tr>
+    <tr data-no="117" data-created="2026-08-03 03:34:13">
+      <td class="no">117</td>
+      <td><strong>unprecedentedly mystically designed</strong></td>
+      <td class="pos">명</td>
+      <td>신비스럽게 디자인된</td>
+    </tr>
+    <tr data-no="118" data-created="2026-08-03 03:34:14">
+      <td class="no">118</td>
+      <td><strong>mystic</strong></td>
+      <td class="pos">명</td>
+      <td>ⓐ 신비주의자</td>
+    </tr>
+    <tr data-no="119" data-created="2026-08-03 03:34:15">
+      <td class="no">119</td>
+      <td><strong>mystically mystical</strong></td>
+      <td class="pos">명</td>
+      <td>ⓑ 신비스러운</td>
+    </tr>
+    <tr data-no="122" data-created="2026-08-03 03:34:16">
+      <td class="no">122</td>
+      <td><strong>droplet drop</strong></td>
+      <td class="pos">명</td>
+      <td>ⓐ 방울 water droplets 물방울들</td>
+    </tr>
+    <tr data-no="127" data-created="2026-08-03 03:34:17">
+      <td class="no">127</td>
+      <td><strong>consider</strong></td>
+      <td class="pos">명</td>
+      <td>, suppose = be</td>
+    </tr>
+    <tr data-no="130" data-created="2026-08-03 03:34:18">
+      <td class="no">130</td>
+      <td><strong>suspicious</strong></td>
+      <td class="pos">명</td>
+      <td>의심스러운</td>
+    </tr>
+    <tr data-no="133" data-created="2026-08-03 03:34:19">
+      <td class="no">133</td>
+      <td><strong>bacteria</strong></td>
+      <td class="pos">명</td>
+      <td>, bug 57 effe</td>
+    </tr>
+    <tr data-no="134" data-created="2026-08-03 03:34:20">
+      <td class="no">134</td>
+      <td><strong>germ germinate</strong></td>
+      <td class="pos">명</td>
+      <td>싹트다 = effi</td>
+    </tr>
+    <tr data-no="135" data-created="2026-08-03 03:34:21">
+      <td class="no">135</td>
+      <td><strong>ine</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="138" data-created="2026-08-03 03:34:22">
+      <td class="no">138</td>
+      <td><strong>body</strong></td>
+      <td class="pos">명</td>
+      <td>58 clini</td>
+    </tr>
+    <tr data-no="139" data-created="2026-08-03 03:34:23">
+      <td class="no">139</td>
+      <td><strong>corpse corporal</strong></td>
+      <td class="pos">명</td>
+      <td>신체의, 육체의 = hos</td>
+    </tr>
+    <tr data-no="142" data-created="2026-08-03 03:34:24">
+      <td class="no">142</td>
+      <td><strong>particle part</strong></td>
+      <td class="pos">명</td>
+      <td>부분, 일부 59 diffe</td>
+    </tr>
+    <tr data-no="143" data-created="2026-08-03 03:34:25">
+      <td class="no">143</td>
+      <td><strong>dist</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="144" data-created="2026-08-03 03:34:26">
+      <td class="no">144</td>
+      <td><strong>sim</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="147" data-created="2026-08-03 03:34:27">
+      <td class="no">147</td>
+      <td><strong>midwife midwifery</strong></td>
+      <td class="pos">명</td>
+      <td>조산사 일 60 ward</td>
+    </tr>
+    <tr data-no="148" data-created="2026-08-03 03:34:28">
+      <td class="no">148</td>
+      <td><strong>room</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="149" data-created="2026-08-03 03:34:29">
+      <td class="no">149</td>
+      <td><strong>dep</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="152" data-created="2026-08-03 03:34:30">
+      <td class="no">152</td>
+      <td><strong>deliver</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="153" data-created="2026-08-03 03:34:31">
+      <td class="no">153</td>
+      <td><strong>bear</strong></td>
+      <td class="pos">명</td>
+      <td>, give birth</td>
+    </tr>
+    <tr data-no="155" data-created="2026-08-03 03:34:32">
+      <td class="no">155</td>
+      <td><strong>delivery</strong></td>
+      <td class="pos">명</td>
+      <td>출산</td>
+    </tr>
+    <tr data-no="157" data-created="2026-08-03 03:34:33">
+      <td class="no">157</td>
+      <td><strong>deliver a baby</strong></td>
+      <td class="pos">명</td>
+      <td>아이를 받다.</td>
+    </tr>
+    <tr data-no="160" data-created="2026-08-03 03:34:34">
+      <td class="no">160</td>
+      <td><strong>efficient</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="161" data-created="2026-08-03 03:34:35">
+      <td class="no">161</td>
+      <td><strong>ineffective</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="163" data-created="2026-08-03 03:34:36">
+      <td class="no">163</td>
+      <td><strong>effect</strong></td>
+      <td class="pos">명</td>
+      <td>효과</td>
+    </tr>
+    <tr data-no="164" data-created="2026-08-03 03:34:37">
+      <td class="no">164</td>
+      <td><strong>effectively</strong></td>
+      <td class="pos">명</td>
+      <td>효과적으로</td>
+    </tr>
+    <tr data-no="165" data-created="2026-08-03 03:34:38">
+      <td class="no">165</td>
+      <td><strong>ses</strong></td>
+      <td class="pos">명</td>
+      <td>.</td>
+    </tr>
+    <tr data-no="166" data-created="2026-08-03 03:34:39">
+      <td class="no">166</td>
+      <td><strong>effective way</strong></td>
+      <td class="pos">명</td>
+      <td>효과적인 방법</td>
+    </tr>
+    <tr data-no="169" data-created="2026-08-03 03:34:40">
+      <td class="no">169</td>
+      <td><strong>hospital</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="171" data-created="2026-08-03 03:34:41">
+      <td class="no">171</td>
+      <td><strong>clinical</strong></td>
+      <td class="pos">명</td>
+      <td>임상의</td>
+    </tr>
+    <tr data-no="172" data-created="2026-08-03 03:34:42">
+      <td class="no">172</td>
+      <td><strong>medical clinic</strong></td>
+      <td class="pos">명</td>
+      <td>병원</td>
+    </tr>
+    <tr data-no="175" data-created="2026-08-03 03:34:43">
+      <td class="no">175</td>
+      <td><strong>major difference</strong></td>
+      <td class="pos">명</td>
+      <td>큰 차이점</td>
+    </tr>
+    <tr data-no="176" data-created="2026-08-03 03:34:44">
+      <td class="no">176</td>
+      <td><strong>distinction</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="177" data-created="2026-08-03 03:34:45">
+      <td class="no">177</td>
+      <td><strong>similarity</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="179" data-created="2026-08-03 03:34:46">
+      <td class="no">179</td>
+      <td><strong>differ</strong></td>
+      <td class="pos">명</td>
+      <td>다르다</td>
+    </tr>
+    <tr data-no="180" data-created="2026-08-03 03:34:47">
+      <td class="no">180</td>
+      <td><strong>differential</strong></td>
+      <td class="pos">명</td>
+      <td>차별하는</td>
+    </tr>
+    <tr data-no="181" data-created="2026-08-03 03:34:48">
+      <td class="no">181</td>
+      <td><strong>It didn</strong></td>
+      <td class="pos">명</td>
+      <td>'t take him long to find a major difference between the two clinics.</td>
+    </tr>
+    <tr data-no="184" data-created="2026-08-03 03:34:49">
+      <td class="no">184</td>
+      <td><strong>department</strong></td>
+      <td class="pos">명</td>
+      <td></td>
+    </tr>
+    <tr data-no="188" data-created="2026-08-03 03:34:50">
+      <td class="no">188</td>
+      <td><strong>medical ward</strong></td>
+      <td class="pos">명</td>
+      <td>내과 병동</td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
