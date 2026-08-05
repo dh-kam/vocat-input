@@ -1,0 +1,1096 @@
+{
+  "words": [
+    {
+      "no": 1,
+      "word": "starve",
+      "pos": "verb",
+      "meaning": "몹시 배고프다"
+    },
+    {
+      "no": 2,
+      "word": "school cafeteria",
+      "pos": "noun",
+      "meaning": "학교 식당"
+    },
+    {
+      "no": 3,
+      "word": "hand in",
+      "pos": "verb",
+      "meaning": "제출하다[내다]"
+    },
+    {
+      "no": 4,
+      "word": "assignment",
+      "pos": "noun",
+      "meaning": "과제"
+    },
+    {
+      "no": 5,
+      "word": "deadline",
+      "pos": "noun",
+      "meaning": "기한, 마감 시간[일자]"
+    },
+    {
+      "no": 6,
+      "word": "healthcare",
+      "pos": "noun",
+      "meaning": "건강관리"
+    },
+    {
+      "no": 7,
+      "word": "comprehensive",
+      "pos": "adjective",
+      "meaning": "종합적인"
+    },
+    {
+      "no": 8,
+      "word": "health check-up",
+      "pos": "noun",
+      "meaning": "건강 검진"
+    },
+    {
+      "no": 9,
+      "word": "survey",
+      "pos": "noun",
+      "meaning": "조사"
+    },
+    {
+      "no": 10,
+      "word": "prepare for",
+      "pos": "verb",
+      "meaning": "~를 준비하다"
+    },
+    {
+      "no": 11,
+      "word": "mid-term exam",
+      "pos": "noun",
+      "meaning": "중간고사"
+    },
+    {
+      "no": 12,
+      "word": "proper",
+      "pos": "adjective",
+      "meaning": "적절한, 제대로 된"
+    },
+    {
+      "no": 13,
+      "word": "charge",
+      "pos": "verb",
+      "meaning": "청구하다"
+    },
+    {
+      "no": 14,
+      "word": "fishing",
+      "pos": "noun",
+      "meaning": "낚시"
+    },
+    {
+      "no": 15,
+      "word": "bucket",
+      "pos": "noun",
+      "meaning": "양동이"
+    },
+    {
+      "no": 16,
+      "word": "empty",
+      "pos": "adjective",
+      "meaning": "빈"
+    },
+    {
+      "no": 17,
+      "word": "grocery store",
+      "pos": "noun",
+      "meaning": "식료품점, 슈퍼마켓"
+    },
+    {
+      "no": 18,
+      "word": "pick up",
+      "pos": "verb",
+      "meaning": "~을 찾다[찾아오다]"
+    },
+    {
+      "no": 19,
+      "word": "take a day off",
+      "pos": "verb",
+      "meaning": "하루 휴가를 쓰다"
+    },
+    {
+      "no": 20,
+      "word": "move into",
+      "pos": "verb",
+      "meaning": "~로 이사하다"
+    },
+    {
+      "no": 21,
+      "word": "gift-wrap",
+      "pos": "verb",
+      "meaning": "선물용으로 포장하다"
+    },
+    {
+      "no": 22,
+      "word": "apply for",
+      "pos": "verb",
+      "meaning": "~에 지원하다"
+    },
+    {
+      "no": 23,
+      "word": "participant",
+      "pos": "noun",
+      "meaning": "참가자"
+    },
+    {
+      "no": 24,
+      "word": "cash prize",
+      "pos": "noun",
+      "meaning": "상금"
+    },
+    {
+      "no": 25,
+      "word": "refundable",
+      "pos": "adjective",
+      "meaning": "환불 가능한"
+    },
+    {
+      "no": 26,
+      "word": "cancel",
+      "pos": "verb",
+      "meaning": "취소하다"
+    },
+    {
+      "no": 27,
+      "word": "profit",
+      "pos": "noun",
+      "meaning": "이익, 수익"
+    },
+    {
+      "no": 28,
+      "word": "contact",
+      "pos": "verb",
+      "meaning": "연락하다"
+    },
+    {
+      "no": 29,
+      "word": "massage chair",
+      "pos": "noun",
+      "meaning": "안마 의자"
+    },
+    {
+      "no": 30,
+      "word": "budget",
+      "pos": "noun",
+      "meaning": "예산"
+    },
+    {
+      "no": 31,
+      "word": "best-selling",
+      "pos": "adjective",
+      "meaning": "베스트셀러의"
+    },
+    {
+      "no": 32,
+      "word": "chapter",
+      "pos": "noun",
+      "meaning": "장"
+    },
+    {
+      "no": 33,
+      "word": "exhausted",
+      "pos": "adjective",
+      "meaning": "기진, 기진맥진한"
+    },
+    {
+      "no": 34,
+      "word": "boost",
+      "pos": "verb",
+      "meaning": "끌어올리다, 높이다"
+    },
+    {
+      "no": 35,
+      "word": "first-aid kit",
+      "pos": "noun",
+      "meaning": "구급상자"
+    },
+    {
+      "no": 36,
+      "word": "upcoming",
+      "pos": "adjective",
+      "meaning": "다가오는"
+    },
+    {
+      "no": 37,
+      "word": "participate in",
+      "pos": "verb",
+      "meaning": "~에 참가하다"
+    },
+    {
+      "no": 38,
+      "word": "celebration",
+      "pos": "noun",
+      "meaning": "기념[축하] 행사"
+    },
+    {
+      "no": 39,
+      "word": "dish",
+      "pos": "noun",
+      "meaning": "요리"
+    },
+    {
+      "no": 40,
+      "word": "commercial break",
+      "pos": "noun",
+      "meaning": "광고 시간"
+    },
+    {
+      "no": 41,
+      "word": "ballroom",
+      "pos": "noun",
+      "meaning": "대연회장"
+    },
+    {
+      "no": 42,
+      "word": "receipt",
+      "pos": "noun",
+      "meaning": "영수증"
+    },
+    {
+      "no": 43,
+      "word": "surf",
+      "pos": "noun",
+      "meaning": "밀려드는 파도"
+    },
+    {
+      "no": 44,
+      "word": "dazzle",
+      "pos": "verb",
+      "meaning": "눈을 부시게 하다"
+    },
+    {
+      "no": 45,
+      "word": "liberate",
+      "pos": "verb",
+      "meaning": "해방하다"
+    },
+    {
+      "no": 46,
+      "word": "renovated",
+      "pos": "adjective",
+      "meaning": "개조된"
+    },
+    {
+      "no": 47,
+      "word": "wander",
+      "pos": "verb",
+      "meaning": "돌아다니다, 거닐다"
+    },
+    {
+      "no": 48,
+      "word": "atmosphere",
+      "pos": "noun",
+      "meaning": "분위기"
+    },
+    {
+      "no": 49,
+      "word": "walnut",
+      "pos": "noun",
+      "meaning": "호두"
+    },
+    {
+      "no": 50,
+      "word": "produce",
+      "pos": "noun",
+      "meaning": "농산물"
+    },
+    {
+      "no": 51,
+      "word": "department",
+      "pos": "noun",
+      "meaning": "매장, 코너"
+    },
+    {
+      "no": 52,
+      "word": "bargain",
+      "pos": "noun",
+      "meaning": "싸게 사는 물건"
+    },
+    {
+      "no": 53,
+      "word": "wholesale club",
+      "pos": "noun",
+      "meaning": "도매점"
+    },
+    {
+      "no": 54,
+      "word": "quantity",
+      "pos": "noun",
+      "meaning": "양"
+    },
+    {
+      "no": 55,
+      "word": "split",
+      "pos": "verb",
+      "meaning": "나누다"
+    },
+    {
+      "no": 56,
+      "word": "come in at",
+      "pos": "verb",
+      "meaning": "~가 되다[소요되다]"
+    },
+    {
+      "no": 57,
+      "word": "pile up",
+      "pos": "verb",
+      "meaning": "~을 쌓다"
+    },
+    {
+      "no": 58,
+      "word": "compelling",
+      "pos": "adjective",
+      "meaning": "설득력 있는"
+    },
+    {
+      "no": 59,
+      "word": "put in",
+      "pos": "verb",
+      "meaning": "~을 투입하다"
+    },
+    {
+      "no": 60,
+      "word": "at best",
+      "pos": "adverb",
+      "meaning": "기껏해야"
+    },
+    {
+      "no": 61,
+      "word": "when it comes to",
+      "pos": "preposition",
+      "meaning": "~에 관한 한"
+    },
+    {
+      "no": 62,
+      "word": "predominantly",
+      "pos": "adverb",
+      "meaning": "대부분"
+    },
+    {
+      "no": 63,
+      "word": "temperate",
+      "pos": "adjective",
+      "meaning": "온대의"
+    },
+    {
+      "no": 64,
+      "word": "medicinal",
+      "pos": "adjective",
+      "meaning": "약용의"
+    },
+    {
+      "no": 65,
+      "word": "orchid",
+      "pos": "noun",
+      "meaning": "난초"
+    },
+    {
+      "no": 66,
+      "word": "spurge",
+      "pos": "noun",
+      "meaning": "등대풀속의 식물"
+    },
+    {
+      "no": 67,
+      "word": "milkweed",
+      "pos": "noun",
+      "meaning": "유액을 분비하는 식물"
+    },
+    {
+      "no": 68,
+      "word": "shelter",
+      "pos": "verb",
+      "meaning": "보호하다"
+    },
+    {
+      "no": 69,
+      "word": "continual",
+      "pos": "adjective",
+      "meaning": "지속적인"
+    },
+    {
+      "no": 70,
+      "word": "navigate",
+      "pos": "verb",
+      "meaning": "항해하다"
+    },
+    {
+      "no": 71,
+      "word": "existence",
+      "pos": "noun",
+      "meaning": "존재"
+    },
+    {
+      "no": 72,
+      "word": "trade-off",
+      "pos": "noun",
+      "meaning": "절충"
+    },
+    {
+      "no": 73,
+      "word": "compromise",
+      "pos": "noun",
+      "meaning": "타협"
+    },
+    {
+      "no": 74,
+      "word": "track",
+      "pos": "verb",
+      "meaning": "추적하다"
+    },
+    {
+      "no": 75,
+      "word": "complexity",
+      "pos": "noun",
+      "meaning": "복잡성"
+    },
+    {
+      "no": 76,
+      "word": "diversity",
+      "pos": "noun",
+      "meaning": "다양성"
+    },
+    {
+      "no": 77,
+      "word": "engage in",
+      "pos": "verb",
+      "meaning": "~을 하다, ~에 참여하다"
+    },
+    {
+      "no": 78,
+      "word": "diplomacy",
+      "pos": "noun",
+      "meaning": "외교(술)"
+    },
+    {
+      "no": 79,
+      "word": "diplomat",
+      "pos": "noun",
+      "meaning": "외교관"
+    },
+    {
+      "no": 80,
+      "word": "childless",
+      "pos": "adjective",
+      "meaning": "아이가 없는"
+    },
+    {
+      "no": 81,
+      "word": "thrive",
+      "pos": "verb",
+      "meaning": "잘 자라다"
+    },
+    {
+      "no": 82,
+      "word": "woodland",
+      "pos": "noun",
+      "meaning": "삼림 지대"
+    },
+    {
+      "no": 83,
+      "word": "attract",
+      "pos": "verb",
+      "meaning": "끌다, 끌어들이다"
+    },
+    {
+      "no": 84,
+      "word": "pollinator",
+      "pos": "noun",
+      "meaning": "꽃가루 매개자"
+    },
+    {
+      "no": 85,
+      "word": "variety",
+      "pos": "noun",
+      "meaning": "품종"
+    },
+    {
+      "no": 86,
+      "word": "substitute",
+      "pos": "noun",
+      "meaning": "대체물, 대용물"
+    },
+    {
+      "no": 87,
+      "word": "colonist",
+      "pos": "noun",
+      "meaning": "식민지 주민"
+    },
+    {
+      "no": 88,
+      "word": "boycott",
+      "pos": "verb",
+      "meaning": "구입을 거부하다"
+    },
+    {
+      "no": 89,
+      "word": "after-dinner beverage",
+      "pos": "noun",
+      "meaning": "식후 음료"
+    },
+    {
+      "no": 90,
+      "word": "setting",
+      "pos": "noun",
+      "meaning": "환경"
+    },
+    {
+      "no": 91,
+      "word": "entry",
+      "pos": "noun",
+      "meaning": "출품작"
+    },
+    {
+      "no": 92,
+      "word": "submit",
+      "pos": "verb",
+      "meaning": "제출하다"
+    },
+    {
+      "no": 93,
+      "word": "experienced",
+      "pos": "adjective",
+      "meaning": "경험이 풍부한"
+    },
+    {
+      "no": 94,
+      "word": "discount",
+      "pos": "noun",
+      "meaning": "할인"
+    },
+    {
+      "no": 95,
+      "word": "adolescence",
+      "pos": "noun",
+      "meaning": "청소년기"
+    },
+    {
+      "no": 96,
+      "word": "unpredictable",
+      "pos": "adjective",
+      "meaning": "예측 불가능한"
+    },
+    {
+      "no": 97,
+      "word": "interpersonal relation",
+      "pos": "noun",
+      "meaning": "대인 관계"
+    },
+    {
+      "no": 98,
+      "word": "maturity",
+      "pos": "noun",
+      "meaning": "성숙함"
+    },
+    {
+      "no": 99,
+      "word": "well-adjusted",
+      "pos": "adjective",
+      "meaning": "정서적으로 안정된"
+    },
+    {
+      "no": 100,
+      "word": "bully",
+      "pos": "verb",
+      "meaning": "괴롭히다"
+    },
+    {
+      "no": 101,
+      "word": "disagreeable",
+      "pos": "adjective",
+      "meaning": "유쾌하지 못한"
+    },
+    {
+      "no": 102,
+      "word": "outcome",
+      "pos": "noun",
+      "meaning": "결과"
+    },
+    {
+      "no": 103,
+      "word": "agreeable",
+      "pos": "adjective",
+      "meaning": "유쾌한"
+    },
+    {
+      "no": 104,
+      "word": "inform",
+      "pos": "verb",
+      "meaning": "정보를 제공하다, 알리다"
+    },
+    {
+      "no": 105,
+      "word": "draw",
+      "pos": "verb",
+      "meaning": "끌어내다, 얻다"
+    },
+    {
+      "no": 106,
+      "word": "occur",
+      "pos": "verb",
+      "meaning": "발생하다"
+    },
+    {
+      "no": 107,
+      "word": "perspective",
+      "pos": "noun",
+      "meaning": "관점, 시각"
+    },
+    {
+      "no": 108,
+      "word": "tradeoff",
+      "pos": "noun",
+      "meaning": "균형"
+    },
+    {
+      "no": 109,
+      "word": "involve",
+      "pos": "verb",
+      "meaning": "포함하다, 수반하다"
+    },
+    {
+      "no": 110,
+      "word": "vastly",
+      "pos": "adverb",
+      "meaning": "크게, 대단히"
+    },
+    {
+      "no": 111,
+      "word": "crop",
+      "pos": "noun",
+      "meaning": "농작물"
+    },
+    {
+      "no": 112,
+      "word": "perspective",
+      "pos": "noun",
+      "meaning": "관점"
+    },
+    {
+      "no": 113,
+      "word": "dismiss",
+      "pos": "verb",
+      "meaning": "묵살하다"
+    },
+    {
+      "no": 114,
+      "word": "in regard to",
+      "pos": "preposition",
+      "meaning": "~에 관해"
+    },
+    {
+      "no": 115,
+      "word": "accumulate",
+      "pos": "verb",
+      "meaning": "축적하다, 모으다"
+    },
+    {
+      "no": 116,
+      "word": "to begin with",
+      "pos": "adverb",
+      "meaning": "우선"
+    },
+    {
+      "no": 117,
+      "word": "be struck",
+      "pos": "verb",
+      "meaning": "놀라다"
+    },
+    {
+      "no": 118,
+      "word": "separate",
+      "pos": "adjective",
+      "meaning": "개별적인, 분리된"
+    },
+    {
+      "no": 119,
+      "word": "accompany",
+      "pos": "verb",
+      "meaning": "동행하다[딸리다]"
+    },
+    {
+      "no": 120,
+      "word": "newly industrializing countries",
+      "pos": "noun",
+      "meaning": "신흥 공업국"
+    },
+    {
+      "no": 121,
+      "word": "imperialism",
+      "pos": "noun",
+      "meaning": "제국주의"
+    },
+    {
+      "no": 122,
+      "word": "undergo",
+      "pos": "verb",
+      "meaning": "겪다"
+    },
+    {
+      "no": 123,
+      "word": "modernization",
+      "pos": "noun",
+      "meaning": "근대화"
+    },
+    {
+      "no": 124,
+      "word": "dependency",
+      "pos": "noun",
+      "meaning": "의존"
+    },
+    {
+      "no": 125,
+      "word": "former",
+      "pos": "adjective",
+      "meaning": "이전의"
+    },
+    {
+      "no": 126,
+      "word": "empire",
+      "pos": "noun",
+      "meaning": "제국"
+    },
+    {
+      "no": 127,
+      "word": "stress",
+      "pos": "verb",
+      "meaning": "강조하다"
+    },
+    {
+      "no": 128,
+      "word": "commodity",
+      "pos": "noun",
+      "meaning": "상품"
+    },
+    {
+      "no": 129,
+      "word": "in return for",
+      "pos": "preposition",
+      "meaning": "~에 대한 대가로"
+    },
+    {
+      "no": 130,
+      "word": "neocolonialism",
+      "pos": "noun",
+      "meaning": "신식민주의"
+    },
+    {
+      "no": 131,
+      "word": "literate",
+      "pos": "adjective",
+      "meaning": "학식이 있는"
+    },
+    {
+      "no": 132,
+      "word": "companion",
+      "pos": "noun",
+      "meaning": "동료"
+    },
+    {
+      "no": 133,
+      "word": "rotation",
+      "pos": "noun",
+      "meaning": "회전"
+    },
+    {
+      "no": 134,
+      "word": "cognitive neuroscientist",
+      "pos": "noun",
+      "meaning": "인지 신경과학자"
+    },
+    {
+      "no": 135,
+      "word": "trace",
+      "pos": "noun",
+      "meaning": "흔적, 자취"
+    },
+    {
+      "no": 136,
+      "word": "concept",
+      "pos": "noun",
+      "meaning": "개념"
+    },
+    {
+      "no": 137,
+      "word": "define",
+      "pos": "verb",
+      "meaning": "정의하다"
+    },
+    {
+      "no": 138,
+      "word": "content",
+      "pos": "noun",
+      "meaning": "내용"
+    },
+    {
+      "no": 139,
+      "word": "signal",
+      "pos": "verb",
+      "meaning": "나타내다, 신호하다"
+    },
+    {
+      "no": 140,
+      "word": "thoroughly",
+      "pos": "adverb",
+      "meaning": "완전히, 철저히"
+    },
+    {
+      "no": 141,
+      "word": "gaze",
+      "pos": "noun",
+      "meaning": "응시"
+    },
+    {
+      "no": 142,
+      "word": "complement",
+      "pos": "verb",
+      "meaning": "보완하다"
+    },
+    {
+      "no": 143,
+      "word": "semi-conductor",
+      "pos": "noun",
+      "meaning": "반도체"
+    },
+    {
+      "no": 144,
+      "word": "proudly",
+      "pos": "adverb",
+      "meaning": "자랑스럽게"
+    },
+    {
+      "no": 145,
+      "word": "long-term",
+      "pos": "adjective",
+      "meaning": "장기적인"
+    },
+    {
+      "no": 146,
+      "word": "strategy",
+      "pos": "noun",
+      "meaning": "계획[전략]"
+    },
+    {
+      "no": 147,
+      "word": "stock",
+      "pos": "noun",
+      "meaning": "주식"
+    },
+    {
+      "no": 148,
+      "word": "clarify",
+      "pos": "verb",
+      "meaning": "분명하게 하다"
+    },
+    {
+      "no": 149,
+      "word": "appeal",
+      "pos": "noun",
+      "meaning": "매력"
+    },
+    {
+      "no": 150,
+      "word": "format",
+      "pos": "noun",
+      "meaning": "구성 방식"
+    },
+    {
+      "no": 151,
+      "word": "distract",
+      "pos": "verb",
+      "meaning": "집중이 안 되게 하다"
+    },
+    {
+      "no": 152,
+      "word": "construct",
+      "pos": "verb",
+      "meaning": "구축하다"
+    },
+    {
+      "no": 153,
+      "word": "elaborate",
+      "pos": "verb",
+      "meaning": "정교하게 하다"
+    },
+    {
+      "no": 154,
+      "word": "effortlessly",
+      "pos": "adverb",
+      "meaning": "쉽게, 노력하지 않고"
+    },
+    {
+      "no": 155,
+      "word": "reflection",
+      "pos": "noun",
+      "meaning": "반영"
+    },
+    {
+      "no": 156,
+      "word": "looking-glass",
+      "pos": "noun",
+      "meaning": "거울"
+    },
+    {
+      "no": 157,
+      "word": "beneath",
+      "pos": "preposition",
+      "meaning": "아래, 밑"
+    },
+    {
+      "no": 158,
+      "word": "obstacle",
+      "pos": "noun",
+      "meaning": "장애, 장애물"
+    },
+    {
+      "no": 159,
+      "word": "complicated",
+      "pos": "adjective",
+      "meaning": "복잡한"
+    },
+    {
+      "no": 160,
+      "word": "crop",
+      "pos": "noun",
+      "meaning": "작물"
+    },
+    {
+      "no": 161,
+      "word": "scarcity",
+      "pos": "noun",
+      "meaning": "부족, 결핍"
+    },
+    {
+      "no": 162,
+      "word": "starvation",
+      "pos": "noun",
+      "meaning": "기아, 굶주림"
+    },
+    {
+      "no": 163,
+      "word": "famine",
+      "pos": "noun",
+      "meaning": "기근"
+    },
+    {
+      "no": 164,
+      "word": "recognize",
+      "pos": "verb",
+      "meaning": "인식하다"
+    },
+    {
+      "no": 165,
+      "word": "adopt",
+      "pos": "verb",
+      "meaning": "채택하다"
+    },
+    {
+      "no": 166,
+      "word": "be credited",
+      "pos": "verb",
+      "meaning": "인정받다"
+    },
+    {
+      "no": 167,
+      "word": "sustain",
+      "pos": "verb",
+      "meaning": "지탱하게 하다, 지속시키다"
+    },
+    {
+      "no": 168,
+      "word": "drought",
+      "pos": "noun",
+      "meaning": "가뭄"
+    },
+    {
+      "no": 169,
+      "word": "devastate",
+      "pos": "verb",
+      "meaning": "황폐화시키다"
+    },
+    {
+      "no": 170,
+      "word": "prize",
+      "pos": "verb",
+      "meaning": "높이 평가하다"
+    },
+    {
+      "no": 171,
+      "word": "call upon",
+      "pos": "verb",
+      "meaning": "~에 요청하다"
+    },
+    {
+      "no": 172,
+      "word": "plentifully",
+      "pos": "adverb",
+      "meaning": "풍부하게"
+    },
+    {
+      "no": 173,
+      "word": "surpass",
+      "pos": "verb",
+      "meaning": "능가하다"
+    },
+    {
+      "no": 174,
+      "word": "malnutrition",
+      "pos": "noun",
+      "meaning": "영양실조"
+    },
+    {
+      "no": 175,
+      "word": "come to the rescue",
+      "pos": "verb",
+      "meaning": "구하러 오다"
+    },
+    {
+      "no": 176,
+      "word": "assess",
+      "pos": "verb",
+      "meaning": "평가하다"
+    },
+    {
+      "no": 177,
+      "word": "construction",
+      "pos": "noun",
+      "meaning": "건설"
+    },
+    {
+      "no": 178,
+      "word": "stun",
+      "pos": "verb",
+      "meaning": "놀라게 하다, 기절시키다"
+    },
+    {
+      "no": 179,
+      "word": "apologize",
+      "pos": "verb",
+      "meaning": "사과하다"
+    },
+    {
+      "no": 180,
+      "word": "vainly",
+      "pos": "adverb",
+      "meaning": "헛되이"
+    },
+    {
+      "no": 181,
+      "word": "manual",
+      "pos": "adjective",
+      "meaning": "손으로 하는"
+    },
+    {
+      "no": 182,
+      "word": "deserve",
+      "pos": "verb",
+      "meaning": "받을 가치가 있다"
+    }
+  ]
+}

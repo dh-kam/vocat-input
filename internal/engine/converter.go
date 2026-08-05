@@ -19,8 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/samber/lo"
 )
 
 var defaultPosMapping = map[string]string{
@@ -1009,72 +1007,4 @@ func cleanWordItems(words []WordItem, targetBBoxScale int) []WordItem {
 	return cleaned
 }
 
-func GenerateDocFile(words []WordItem, outputPath string) error {
-	var html bytes.Buffer
-	html.WriteString(`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Vocat Vocabulary Test Sheet</title>
-<style>
-  body { font-family: 'Malgun Gothic', sans-serif; margin: 20px; }
-  h1 { text-align: center; color: #2b3674; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-  th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
-  th { background-color: #f1f5f9; color: #1e293b; }
-  tr:nth-child(even) { background-color: #f8fafc; }
-  .pos { font-weight: bold; color: #4318ff; text-align: center; width: 60px; }
-  .no { text-align: center; width: 50px; }
-</style>
-</head>
-<body>
-<h1>Vocat 단어 시험지 및 정답표</h1>
-<table>
-  <thead>
-    <tr>
-      <th class="no">No</th>
-      <th>영어 단어 (Word)</th>
-      <th class="pos">품사</th>
-      <th>한국어 의미 (Meaning)</th>
-    </tr>
-  </thead>
-  <tbody>
-`)
-
-	baseTime := time.Now().Add(-time.Duration(len(words)) * time.Second)
-	for idx, w := range words {
-		meaningText := ""
-		switch m := w.Meaning.(type) {
-		case string:
-			meaningText = m
-		case []interface{}:
-			strList := lo.Map(m, func(item interface{}, _ int) string {
-				return fmt.Sprintf("%v", item)
-			})
-			meaningText = strings.Join(strList, ", ")
-		}
-
-		createdTime := w.Created
-		if createdTime == "" {
-			createdTime = baseTime.Add(time.Duration(idx) * time.Second).Format("2006-01-02 15:04:05")
-		}
-
-		fmt.Fprintf(&html, `    <tr data-no="%d" data-created="%s">
-      <td class="no">%d</td>
-      <td><strong>%s</strong></td>
-      <td class="pos">%s</td>
-      <td>%s</td>
-    </tr>
-`, w.No, createdTime, w.No, w.Word, w.Pos, meaningText)
-	}
-
-	html.WriteString(`  </tbody>
-</table>
-</body>
-</html>`)
-
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(outputPath, html.Bytes(), 0o644)
-}
+// GenerateDocFile has been moved to vocat_export.go
