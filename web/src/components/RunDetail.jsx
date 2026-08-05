@@ -7,6 +7,7 @@ import {
   Layers, RefreshCw, ArrowUp, ArrowDown, Search, X, Pencil, Check, AlertTriangle
 } from 'lucide-react';
 import { CroppedEvidenceThumbnail, InteractiveRedBoxModal } from './BoundingBoxViewer';
+import DocPreviewModal from './DocPreviewModal';
 
 export default function RunDetail({ 
   run, 
@@ -29,6 +30,10 @@ export default function RunDetail({
 
   // Discard changes modal state
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  
+  // Doc preview state
+  const [showDocPreview, setShowDocPreview] = useState(false);
+  const [docPreviewData, setDocPreviewData] = useState(null);
 
   const logContainerRef = useRef(null);
   const isAtBottomRef = useRef(true);
@@ -200,6 +205,21 @@ export default function RunDetail({
     }
   };
 
+  const handlePreviewDoc = async () => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/runs/${run.id}/download/doc`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('DOC preview failed');
+      const json = await res.json();
+      setDocPreviewData(json);
+      setShowDocPreview(true);
+    } catch (err) {
+      console.error('Error previewing DOC:', err);
+      alert('Could not preview DOC file. It might not be generated yet or is in invalid format.');
+    }
+  };
+
   const handleDownloadJSON = async () => {
     try {
       const res = await fetch(`http://localhost:8080/api/runs/${run.id}/download/json`, {
@@ -336,6 +356,14 @@ export default function RunDetail({
                   className="px-4 py-2.5 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 shadow-sm flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <FileText className="w-4.5 h-4.5 text-sky-600" /> .DOC Sheet
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handlePreviewDoc}
+                  className="px-4 py-2.5 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Eye className="w-4.5 h-4.5 text-indigo-600" /> Preview DOC
                 </button>
 
                 <button 
@@ -857,6 +885,11 @@ export default function RunDetail({
         </Dialog.Root>
       )}
 
+      <DocPreviewModal 
+        isOpen={showDocPreview} 
+        onClose={() => setShowDocPreview(false)} 
+        docData={docPreviewData} 
+      />
     </div>
   );
 }
