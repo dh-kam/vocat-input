@@ -1,0 +1,97 @@
+[
+  {"no":1,"word":"scribble","pos":"noun","meaning":"낙서"},
+  {"no":2,"word":"marking","pos":"noun","meaning":"표시"},
+  {"no":3,"word":"valid","pos":"adjective","meaning":"타당한"},
+  {"no":4,"word":"accomplish","pos":"verb","meaning":"성취하다"},
+  {"no":5,"word":"essence","pos":"noun","meaning":"본질"},
+
+  {"no":6,"word":"appreciate","pos":"verb","meaning":"진가를 알아보다"},
+  {"no":7,"word":"visual","pos":"adjective","meaning":"시각의"},
+  {"no":8,"word":"generate","pos":"verb","meaning":"야기하다"},
+  {"no":9,"word":"controversy","pos":"noun","meaning":"논란"},
+  {"no":10,"word":"largely","pos":"adverb","meaning":"대체로"},
+
+  {"no":11,"word":"submit","pos":"verb","meaning":"제출하다"},
+  {"no":12,"word":"simply","pos":"adverb","meaning":"그저, 단순히"},
+  {"no":13,"word":"impact","pos":"verb","meaning":"영향을 주다"},
+  {"no":14,"word":"shameful","pos":"adjective","meaning":"창피한"},
+  {"no":15,"word":"insightful","pos":"adjective","meaning":"통찰력 있는"},
+
+  {"no":16,"word":"progress","pos":"noun","meaning":"발전"},
+  {"no":17,"word":"crucial","pos":"adjective","meaning":"중대한"},
+  {"no":18,"word":"conflict","pos":"noun","meaning":"갈등"},
+  {"no":19,"word":"occur","pos":"verb","meaning":"발생하다"},
+  {"no":20,"word":"self-awareness","pos":"noun","meaning":"자기 인식"},
+
+  {"no":21,"word":"significant","pos":"adjective","meaning":"중요한"},
+  {"no":22,"word":"intimately","pos":"adverb","meaning":"깊이"},
+  {"no":23,"word":"drive","pos":"verb","meaning":"~하게 하다"},
+  {"no":24,"word":"overcome","pos":"verb","meaning":"극복하다"},
+  {"no":25,"word":"hesitate","pos":"verb","meaning":"망설이다"},
+
+  {"no":26,"word":"intermediary","pos":"noun","meaning":"중재자"},
+  {"no":27,"word":"supernatural","pos":"adjective","meaning":"초자연적인"},
+  {"no":28,"word":"claim","pos":"verb","meaning":"(⋯이 사실이라고) 주장하다"},
+  {"no":29,"word":"illness","pos":"noun","meaning":"병"},
+  {"no":30,"word":"foretell","pos":"verb","meaning":"예언하다"},
+
+  {"no":31,"word":"prevent","pos":"verb","meaning":"방지하다"},
+  {"no":32,"word":"spiritual","pos":"adjective","meaning":"영적인"},
+  {"no":33,"word":"force","pos":"noun","meaning":"힘"},
+  {"no":34,"word":"conscious","pos":"adjective","meaning":"의식적인"},
+  {"no":35,"word":"state","pos":"noun","meaning":"상태"},
+
+  {"no":36,"word":"seemingly","pos":"adverb","meaning":"겉보기에는"},
+  {"no":37,"word":"fasting","pos":"noun","meaning":"단식"},
+  {"no":38,"word":"consult","pos":"verb","meaning":"~에게 정보를 구하다"},
+  {"no":39,"word":"wandering","pos":"adjective","meaning":"헤매는"},
+  {"no":40,"word":"society","pos":"noun","meaning":"사회"},
+
+  {"no":41,"word":"deceive","pos":"verb","meaning":"속이다"},
+  {"no":42,"word":"benefit","pos":"noun","meaning":"이득"},
+  {"no":43,"word":"disclose","pos":"verb","meaning":"드러내다"},
+  {"no":44,"word":"essential","pos":"adjective","meaning":"필수적인"},
+  {"no":45,"word":"establish","pos":"verb","meaning":"수립하다"},
+
+  {"no":46,"word":"analyst","pos":"noun","meaning":"분석가"},
+  {"no":47,"word":"closeness","pos":"noun","meaning":"친밀"},
+  {"no":48,"word":"mutual","pos":"adjective","meaning":"상호간의"},
+  {"no":49,"word":"attraction","pos":"noun","meaning":"매력"},
+  {"no":50,"word":"calligraphy","pos":"noun","meaning":"서예"},
+
+  {"no":51,"word":"typical","pos":"adjective","meaning":"전형적인"},
+  {"no":52,"word":"abundant","pos":"adjective","meaning":"풍부한"},
+  {"no":53,"word":"motivate","pos":"verb","meaning":"~에게 동기를 주다"},
+  {"no":54,"word":"spinal","pos":"adjective","meaning":"척추의"},
+  {"no":55,"word":"hormone","pos":"noun","meaning":"호르몬"},
+
+  {"no":56,"word":"various","pos":"adjective","meaning":"다양한"},
+  {"no":57,"word":"extrovert","pos":"noun","meaning":"외향적인 사람"},
+  {"no":58,"word":"regarding","pos":"preposition","meaning":"~에 관하여"},
+  {"no":59,"word":"imitation","pos":"noun","meaning":"흉내 내기"},
+  {"no":60,"word":"inferior","pos":"adjective","meaning":"열등한"},
+
+  {"no":61,"word":"discovery","pos":"noun","meaning":"발견"},
+  {"no":62,"word":"entail","pos":"verb","meaning":"수반하다"},
+  {"no":63,"word":"combination","pos":"noun","meaning":"결합"},
+  {"no":64,"word":"preference","pos":"noun","meaning":"선호"},
+  {"no":65,"word":"avoid","pos":"verb","meaning":"피하다"},
+
+  {"no":66,"word":"percentage","pos":"noun","meaning":"비율"},
+  {"no":67,"word":"inventor","pos":"noun","meaning":"발명가"},
+  {"no":68,"word":"diverse","pos":"adjective","meaning":"다양한"},
+  {"no":69,"word":"patent","pos":"noun","meaning":"특허"},
+  {"no":70,"word":"improvement","pos":"noun","meaning":"향상"},
+
+  {"no":71,"word":"conceptualize","pos":"verb","meaning":"개념화하다"},
+  {"no":72,"word":"issue","pos":"verb","meaning":"발급하다"},
+  {"no":73,"word":"flexible","pos":"adjective","meaning":"유연한"},
+  {"no":74,"word":"perceive","pos":"verb","meaning":"인식하다"},
+  {"no":75,"word":"taste","pos":"noun","meaning":"취향"},
+
+  {"no":76,"word":"speculate","pos":"verb","meaning":"추측하다"},
+  {"no":77,"word":"alternative","pos":"noun","meaning":"대안"},
+  {"no":78,"word":"reject","pos":"verb","meaning":"거절하다"},
+  {"no":79,"word":"appealing","pos":"adjective","meaning":"매력적인"},
+  {"no":80,"word":"argue","pos":"verb","meaning":"논쟁하다"}
+]

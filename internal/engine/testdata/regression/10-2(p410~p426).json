@@ -1,0 +1,232 @@
+[
+  { "no": 1, "word": "missionary", "pos": "noun", "meaning": "선교사" },
+  { "no": 2, "word": "spectator", "pos": "noun", "meaning": "관중" },
+  { "no": 3, "word": "depth", "pos": "noun", "meaning": "깊이" },
+  { "no": 4, "word": "entirely", "pos": "adverb", "meaning": "완전히" },
+  { "no": 5, "word": "occasionally", "pos": "adverb", "meaning": "가끔" },
+  { "no": 6, "word": "devote", "pos": "verb", "meaning": "바치다" },
+  { "no": 7, "word": "physically", "pos": "adverb", "meaning": "물리적으로" },
+  { "no": 8, "word": "scatter", "pos": "verb", "meaning": "흩어지다" },
+  { "no": 9, "word": "inactive", "pos": "adjective", "meaning": "활동하지 않는" },
+  { "no": 10, "word": "scarce", "pos": "adjective", "meaning": "부족한" },
+  { "no": 11, "word": "miser", "pos": "noun", "meaning": "구두쇠" },
+  { "no": 12, "word": "urge", "pos": "verb", "meaning": "강력히 권고하다" },
+  { "no": 13, "word": "generation", "pos": "noun", "meaning": "세대" },
+  { "no": 14, "word": "criticize", "pos": "verb", "meaning": "비판하다" },
+  { "no": 15, "word": "agricultural", "pos": "adjective", "meaning": "농업의" },
+  { "no": 16, "word": "reduction", "pos": "noun", "meaning": "감소" },
+  { "no": 17, "word": "compute", "pos": "verb", "meaning": "계산하다" },
+  { "no": 18, "word": "recognition", "pos": "noun", "meaning": "인식" },
+  { "no": 19, "word": "strive", "pos": "verb", "meaning": "분투하다" },
+  { "no": 20, "word": "burst", "pos": "verb", "meaning": "터뜨리다, 터지다" },
+  { "no": 21, "word": "unofficial", "pos": "adjective", "meaning": "비공식적인" },
+  { "no": 22, "word": "medication", "pos": "noun", "meaning": "약, 약물" },
+  { "no": 23, "word": "consciousness", "pos": "noun", "meaning": "의식" },
+  { "no": 24, "word": "notice", "pos": "verb", "meaning": "알아채다, 인지하다" },
+  { "no": 25, "word": "panic", "pos": "verb", "meaning": "겁에 질려 어쩔 줄 모르다" },
+  { "no": 26, "word": "assistance", "pos": "noun", "meaning": "도움" },
+  { "no": 27, "word": "immediately", "pos": "adverb", "meaning": "즉시" },
+  { "no": 28, "word": "ensure", "pos": "verb", "meaning": "보장하다" },
+  { "no": 29, "word": "constant", "pos": "adjective", "meaning": "끊임없는, 일정한" },
+  { "no": 30, "word": "stable", "pos": "adjective", "meaning": "안정된" },
+  { "no": 31, "word": "preparation", "pos": "noun", "meaning": "준비" },
+  { "no": 32, "word": "emergency", "pos": "noun", "meaning": "비상, 응급" },
+  { "no": 33, "word": "symptom", "pos": "noun", "meaning": "증상" },
+  { "no": 34, "word": "illustrate", "pos": "verb", "meaning": "설명하다" },
+  { "no": 35, "word": "logical", "pos": "adjective", "meaning": "타당한" },
+  { "no": 36, "word": "annual", "pos": "adjective", "meaning": "연례의" },
+  { "no": 37, "word": "unconscious", "pos": "adjective", "meaning": "의식을 잃은" },
+  { "no": 38, "word": "regular", "pos": "adjective", "meaning": "보통의, 평상시의" },
+  { "no": 39, "word": "pull", "pos": "verb", "meaning": "(차량 등을 한쪽으로) 틀다" },
+  { "no": 40, "word": "slam", "pos": "verb", "meaning": "치다, 때리다" },
+  { "no": 41, "word": "collapse", "pos": "verb", "meaning": "무너지다, 찌그러지다" },
+  { "no": 42, "word": "dashboard", "pos": "noun", "meaning": "(승용차의) 계기판" },
+  { "no": 43, "word": "paramedic", "pos": "noun", "meaning": "긴급 의료원" },
+  { "no": 44, "word": "victim", "pos": "noun", "meaning": "희생자" },
+  { "no": 45, "word": "survival", "pos": "noun", "meaning": "생존" },
+  { "no": 46, "word": "tremendous", "pos": "adjective", "meaning": "엄청난" },
+  { "no": 47, "word": "overnight", "pos": "adverb", "meaning": "밤새도록" },
+  { "no": 48, "word": "desire", "pos": "noun", "meaning": "갈망, 바람" },
+  { "no": 49, "word": "maternity", "pos": "noun", "meaning": "어머니인 상태" },
+  { "no": 50, "word": "determined", "pos": "adjective", "meaning": "단단히 결심한" },
+    {
+    "no": 51,
+    "word": "suspect",
+    "pos": "verb",
+    "meaning": "짐작하다"
+  },
+  {
+    "no": 52,
+    "word": "germ",
+    "pos": "noun",
+    "meaning": "세균"
+  },
+  {
+    "no": 53,
+    "word": "corpse",
+    "pos": "noun",
+    "meaning": "시체"
+  },
+  {
+    "no": 54,
+    "word": "particle",
+    "pos": "noun",
+    "meaning": "입자, 미립자"
+  },
+  {
+    "no": 55,
+    "word": "midwife",
+    "pos": "noun",
+    "meaning": "조산사"
+  },
+  {
+    "no": 56,
+    "word": "deliver",
+    "pos": "verb",
+    "meaning": "출산하다"
+  },
+  {
+    "no": 57,
+    "word": "effective",
+    "pos": "adjective",
+    "meaning": "효과적인"
+  },
+  {
+    "no": 58,
+    "word": "clinic",
+    "pos": "noun",
+    "meaning": "병원, 병동"
+  },
+  {
+    "no": 59,
+    "word": "difference",
+    "pos": "noun",
+    "meaning": "차이"
+  },
+  {
+    "no": 60,
+    "word": "ward",
+    "pos": "noun",
+    "meaning": "~실, 병동"
+  },
+  {
+    "no": 61,
+    "word": "elevated",
+    "pos": "adjective",
+    "meaning": "(주변이나 지면보다) 높은"
+  },
+  {
+    "no": 62,
+    "word": "unhurried",
+    "pos": "adjective",
+    "meaning": "서두르지 않는, 느긋한"
+  },
+  {
+    "no": 63,
+    "word": "customer",
+    "pos": "noun",
+    "meaning": "고객"
+  },
+  {
+    "no": 64,
+    "word": "certificate",
+    "pos": "noun",
+    "meaning": "증명서"
+  },
+  {
+    "no": 65,
+    "word": "translation",
+    "pos": "noun",
+    "meaning": "번역"
+  },
+  {
+    "no": 66,
+    "word": "setting",
+    "pos": "noun",
+    "meaning": "(어떤 일이 일어나는) 배경, 환경"
+  },
+  {
+    "no": 67,
+    "word": "pedestrian",
+    "pos": "adjective",
+    "meaning": "평범한, 단조로운"
+  },
+  {
+    "no": 68,
+    "word": "voucher",
+    "pos": "noun",
+    "meaning": "상품권"
+  },
+  {
+    "no": 69,
+    "word": "purchase",
+    "pos": "verb",
+    "meaning": "구매하다, 구입하다"
+  },
+  {
+    "no": 70,
+    "word": "scholarship",
+    "pos": "noun",
+    "meaning": "장학금"
+  },
+  {
+    "no": 71,
+    "word": "rigid",
+    "pos": "adjective",
+    "meaning": "엄격한, 엄정한"
+  },
+  {
+    "no": 72,
+    "word": "embody",
+    "pos": "verb",
+    "meaning": "상징하다, 구현하다"
+  },
+  {
+    "no": 73,
+    "word": "include",
+    "pos": "verb",
+    "meaning": "포함하다"
+  },
+  {
+    "no": 74,
+    "word": "heightened",
+    "pos": "adjective",
+    "meaning": "고도의"
+  },
+  {
+    "no": 75,
+    "word": "breed",
+    "pos": "verb",
+    "meaning": "새끼를 낳다"
+  },
+  {
+    "no": 76,
+    "word": "astronomy",
+    "pos": "noun",
+    "meaning": "천문학"
+  },
+  {
+    "no": 77,
+    "word": "evoke",
+    "pos": "verb",
+    "meaning": "불러일으키다"
+  },
+  {
+    "no": 78,
+    "word": "irretrievable",
+    "pos": "adjective",
+    "meaning": "회수할 수 없는, 돌이킬 수 없는"
+  },
+  {
+    "no": 79,
+    "word": "mystically",
+    "pos": "adverb",
+    "meaning": "신기하게, 신비하게"
+  },
+  {
+    "no": 80,
+    "word": "droplet",
+    "pos": "noun",
+    "meaning": "작은 방울"
+  }
+]
