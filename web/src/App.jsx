@@ -34,22 +34,12 @@ export default function App({ embedded = false, apiBase } = {}) {
     setNotification({ msg, type });
   };
 
-  const ensureAuth = async () => {
-    try {
-      await fetch(`${resolvedApiBase}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ secret: 'vocat_secure_session_secret_2026' })
-      });
-    } catch (err) {
-      console.error('Session init error:', err);
-    }
-  };
-
+  // The app holds no secret. The server issues an httpOnly session cookie with index.html, and
+  // credentials: 'include' carries it on every call below. This used to POST /login with a
+  // literal secret compiled into the bundle, which made the value public to anyone who loaded
+  // the page and re-sent it on every poll tick.
   const fetchRuns = async () => {
     try {
-      await ensureAuth();
       const res = await fetch(`${resolvedApiBase}/runs`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();

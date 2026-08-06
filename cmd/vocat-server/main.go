@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -25,8 +28,14 @@ var (
 func main() {
 	cwd, _ := os.Getwd()
 	storageDir := filepath.Join(cwd, "storage")
+	_ = os.MkdirAll(storageDir, 0o755)
 	store = engine.NewRunStore(storageDir)
 	registry = engine.NewProviderRegistry()
+
+	var err error
+	if sessionSecret, err = resolveSessionSecret(storageDir); err != nil {
+		log.Fatalf("Cannot establish a session secret: %v", err)
+	}
 
 	// Auto-recover zombie/interrupted runs on server startup
 	for _, run := range store.List() {
@@ -70,9 +79,7 @@ func main() {
 		c.File(filepath.Join(webDistDir, "favicon.svg"))
 	})
 
-	r.GET("/", func(c *gin.Context) {
-		c.File(filepath.Join(webDistDir, "index.html"))
-	})
+	r.GET("/", serveSPA(webDistDir))
 
 	api := r.Group("/api")
 	{
@@ -119,7 +126,9 @@ func main() {
 			return
 		}
 
-		// SPA Client Fallback
+		// SPA Client Fallback — a deep link is an entry point too, so it issues a session
+		// exactly like GET / does.
+		issueSessionCookie(c)
 		c.File(filepath.Join(webDistDir, "index.html"))
 	})
 
@@ -133,38 +142,86 @@ func main() {
 	}
 }
 
-func getSessionSecret() string {
-	secret := engine.LookupConfig("VOCAT_SESSION_SECRET")
-	if secret == "" {
-		secret = "vocat_secure_session_secret_2026"
+// sessionSecret authenticates non-browser API clients through the Authorization or
+// X-Vocat-Session header. Browsers never see it: the server hands them an httpOnly cookie when
+// it serves the SPA (see serveSPA).
+//
+// It is resolved once at startup rather than per request, and there is no built-in default any
+// more. The previous fallback was a literal committed here and also shipped inside the built web
+// bundle, so every deployment accepted a publicly known value.
+var sessionSecret string
+
+// resolveSessionSecret prefers an explicit VOCAT_SESSION_SECRET. Failing that it generates one
+// and keeps it in storage/session_secret, so no configuration is required, the value survives
+// restarts (a fresh one each boot would invalidate every open tab's cookie), and an API client
+// can read it from that file.
+func resolveSessionSecret(storageDir string) (string, error) {
+	if s := engine.LookupConfig("VOCAT_SESSION_SECRET"); s != "" {
+		return s, nil
 	}
-	return secret
+
+	path := filepath.Join(storageDir, "session_secret")
+	if existing, err := os.ReadFile(path); err == nil {
+		if s := strings.TrimSpace(string(existing)); s != "" {
+			return s, nil
+		}
+	}
+
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", fmt.Errorf("generating a session secret: %w", err)
+	}
+	secret := hex.EncodeToString(buf)
+	if err := os.WriteFile(path, []byte(secret+"\n"), 0o600); err != nil {
+		return "", fmt.Errorf("writing %s: %w", path, err)
+	}
+	log.Printf("[AUTH] VOCAT_SESSION_SECRET is not set; generated one and stored it in %s", path)
+	return secret, nil
+}
+
+// issueSessionCookie grants the browser a session without the page ever holding the secret.
+// httpOnly keeps it away from scripts on the origin, which the previous cookie did not.
+func issueSessionCookie(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "vocat_session",
+		Value:    sessionSecret,
+		Path:     "/",
+		MaxAge:   86400,
+		HttpOnly: true,
+		Secure:   c.Request.TLS != nil,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// serveSPA returns index.html and, in the same response, the session the app needs to call the
+// API. The SPA used to post a secret literal compiled into its own bundle instead.
+func serveSPA(webDistDir string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		issueSessionCookie(c)
+		c.File(filepath.Join(webDistDir, "index.html"))
+	}
+}
+
+// tokenMatches compares in constant time so a valid secret cannot be recovered a byte at a time.
+func tokenMatches(given string) bool {
+	return given != "" && hmac.Equal([]byte(given), []byte(sessionSecret))
+}
+
+// isAuthenticated accepts the browser's session cookie or, for non-browser clients, the secret
+// in either header. All three comparisons are constant time.
+func isAuthenticated(c *gin.Context) bool {
+	if cookieToken, err := c.Cookie("vocat_session"); err == nil && tokenMatches(cookieToken) {
+		return true
+	}
+	if bearer, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer "); ok && tokenMatches(bearer) {
+		return true
+	}
+	return tokenMatches(c.GetHeader("X-Vocat-Session"))
 }
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		validSecret := getSessionSecret()
-
-		// 1. Check Session Cookie
-		cookieToken, err := c.Cookie("vocat_session")
-		if err == nil && cookieToken == validSecret {
-			c.Next()
-			return
-		}
-
-		// 2. Check Authorization Header
-		authHeader := c.GetHeader("Authorization")
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			token := strings.TrimPrefix(authHeader, "Bearer ")
-			if token == validSecret {
-				c.Next()
-				return
-			}
-		}
-
-		// 3. Check X-Vocat-Session Header
-		xToken := c.GetHeader("X-Vocat-Session")
-		if xToken == validSecret {
+		if isAuthenticated(c) {
 			c.Next()
 			return
 		}
@@ -172,21 +229,23 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   "Unauthorized access. Valid session or bearer token required to access backend API.",
 			"code":    "UNAUTHORIZED",
-			"details": "Please log in or supply a valid X-Vocat-Session header.",
+			"details": "Load the web app to receive a session, or supply a valid X-Vocat-Session header.",
 		})
 		c.Abort()
 	}
 }
 
+// handleLogin remains for non-browser clients that would rather hold a cookie than repeat the
+// header. The web app no longer calls it: it receives its session from serveSPA and never holds
+// the secret.
 func handleLogin(c *gin.Context) {
 	var req struct {
 		Secret string `json:"secret"`
 	}
 	_ = c.ShouldBindJSON(&req)
 
-	validSecret := getSessionSecret()
-	if req.Secret != "" && req.Secret == validSecret {
-		c.SetCookie("vocat_session", validSecret, 86400, "/", "", false, false)
+	if tokenMatches(req.Secret) {
+		issueSessionCookie(c)
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "authenticated",
 			"message": "Session successfully established",
@@ -198,16 +257,14 @@ func handleLogin(c *gin.Context) {
 }
 
 func handleLogout(c *gin.Context) {
-	c.SetCookie("vocat_session", "", -1, "/", "", false, false)
+	c.SetCookie("vocat_session", "", -1, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"status": "logged_out", "message": "Session terminated"})
 }
 
 func handleAuthStatus(c *gin.Context) {
-	validSecret := getSessionSecret()
-	cookieToken, err := c.Cookie("vocat_session")
-	isAuth := err == nil && cookieToken == validSecret
+	// Reports on every credential channel the middleware accepts, not just the cookie.
 	c.JSON(http.StatusOK, gin.H{
-		"authenticated": isAuth,
+		"authenticated": isAuthenticated(c),
 	})
 }
 
