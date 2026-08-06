@@ -341,7 +341,7 @@ CRITICAL RULES FOR TRANSCRIPTION:
 	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("vertex api request failed: %w", err)
+		return "", RedactedError("vertex api request failed: %s", err)
 	}
 	defer resp.Body.Close()
 
@@ -488,7 +488,7 @@ Transcribe all text from this image accurately while preserving structural layou
 		client := &http.Client{Timeout: 35 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
-			lastErr = fmt.Errorf("bedrock request failed for %s: %w", modelID, err)
+			lastErr = RedactedError("bedrock request failed for "+modelID+": %s", err)
 			continue
 		}
 
@@ -606,7 +606,7 @@ func (a *AnthropicOCRProvider) ProcessImage(ctx context.Context, imagePath strin
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("anthropic api request failed: %w", err)
+		return "", RedactedError("anthropic api request failed: %s", err)
 	}
 	defer resp.Body.Close()
 

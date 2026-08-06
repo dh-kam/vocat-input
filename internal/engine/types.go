@@ -15,13 +15,13 @@ type WordItem struct {
 	No          int         `json:"no"`
 	Word        string      `json:"word"`
 	Pos         string      `json:"pos"`
-	Meaning     interface{} `json:"meaning"`             // string or []string
-	Created     string      `json:"created,omitempty"`   // Timestamp string for sequential ordering
-	BBox        []int       `json:"bbox,omitempty"`      // [ymin, xmin, ymax, xmax]
+	Meaning     interface{} `json:"meaning"`               // string or []string
+	Created     string      `json:"created,omitempty"`     // Timestamp string for sequential ordering
+	BBox        []int       `json:"bbox,omitempty"`        // [ymin, xmin, ymax, xmax]
 	ImageWidth  int         `json:"imageWidth,omitempty"`  // Reference image width used by AI
 	ImageHeight int         `json:"imageHeight,omitempty"` // Reference image height used by AI
-	ImageIndex  int         `json:"imageIndex,omitempty"`// 1-indexed
-	ImageName   string      `json:"imageName,omitempty"` // Image filename
+	ImageIndex  int         `json:"imageIndex,omitempty"`  // 1-indexed
+	ImageName   string      `json:"imageName,omitempty"`   // Image filename
 }
 
 type OCRResult struct {
@@ -85,6 +85,50 @@ func GetModelBBoxScale(provider, model string) int {
 		return 100
 	}
 	return 1000
+}
+
+// MarshalJSON serializes the run while holding its own mutex.
+//
+// Handlers hand the shared *ConversionRun straight to c.JSON and RunStore.saveToDiskLocked
+// marshals every run holding only the store's lock, all while worker goroutines mutate the same
+// run through the setters below. Reading Logs or OCRResults while another goroutine appends to
+// them is a real data race that -race reports, and the UI polls both endpoints every 350ms
+// during a conversion, so it is the normal case rather than an edge one. Locking here rather
+// than at each call site means every present and future marshalling path is covered.
+func (r *ConversionRun) MarshalJSON() ([]byte, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// plain has no MarshalJSON method, so this does not recurse. The conversion is on the
+	// pointer, so the mutex is not copied.
+	type plain ConversionRun
+	return json.Marshal((*plain)(r))
+}
+
+// TryClaim moves the run into an in-flight status, but only if no pipeline already holds it, and
+// reports whether the caller won the claim.
+//
+// Checking Status and then setting it from a handler is a race with itself. Nothing guarded these
+// entry points before, so a double-click on Convert, or the SPA's retry landing next to the
+// original request, started two goroutines over the same run: both looped the same Images, both
+// called SetWords, and their progress and log updates interleaved into one timeline.
+func (r *ConversionRun) TryClaim(status RunStatus) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.Status == RunStatusOCRProgress || r.Status == RunStatusMerging {
+		return false
+	}
+	r.Status = status
+	r.Error = ""
+	return true
+}
+
+// SetTitle exists so handlers stop assigning to run.Title directly and racing the marshaller.
+func (r *ConversionRun) SetTitle(title string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Title = title
 }
 
 func (r *ConversionRun) AddLog(msg string) {

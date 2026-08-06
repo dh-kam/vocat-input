@@ -68,7 +68,7 @@ func SendDocToTelegram(docPath, customFileName, caption string) error {
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("telegram request failed: %w", err)
+		return RedactedError("telegram request failed: %s", err)
 	}
 	defer resp.Body.Close()
 

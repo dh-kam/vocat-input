@@ -209,7 +209,7 @@ OCR TEXT SAMPLE:
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("format analysis request failed: %w", err)
+		return "", RedactedError("format analysis request failed: %s", err)
 	}
 	defer resp.Body.Close()
 
@@ -449,7 +449,7 @@ Text:
 	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("vertex api request failed: %w", err)
+		return nil, RedactedError("vertex api request failed: %s", err)
 	}
 	defer resp.Body.Close()
 

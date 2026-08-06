@@ -1,7 +1,9 @@
 package engine
 
 import (
+	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -79,4 +81,36 @@ func parseEnvLine(line string) (key, value string, ok bool) {
 		}
 	}
 	return key, value, key != ""
+}
+
+// secretsInURLs matches the credential shapes this project puts into request URLs: the Google API
+// key that getGoogleOCRAuth appends as a query parameter, and the Telegram bot token that sits in
+// the URL path.
+var secretsInURLs = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)([?&](?:key|api[-_]?key|access[-_]?token)=)[^&\s"'\\]+`),
+	regexp.MustCompile(`(/bot)[0-9]+:[A-Za-z0-9_-]+`),
+}
+
+// RedactSecrets strips credentials out of a message before it is logged or stored.
+//
+// net/http returns *url.Error carrying the full request URL, and Go's own redaction covers only
+// userinfo passwords - not query parameters. So any transport failure on a Vertex call built with
+// "?key=..." put the API key straight into the error text, which the server appends to run.Logs,
+// persists in storage/runs_db.json and renders in the web UI. The Telegram token leaked the same
+// way through its URL path.
+func RedactSecrets(msg string) string {
+	for _, re := range secretsInURLs {
+		msg = re.ReplaceAllString(msg, "${1}REDACTED")
+	}
+	return msg
+}
+
+// RedactedError wraps err with a message whose credentials have been removed. It returns a plain
+// error rather than preserving the chain, because the original text is exactly what must not
+// survive.
+func RedactedError(format string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf(format, RedactSecrets(err.Error()))
 }

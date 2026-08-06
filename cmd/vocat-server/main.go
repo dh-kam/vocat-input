@@ -482,7 +482,13 @@ func handleStartOCR(c *gin.Context) {
 		return
 	}
 
-	run.SetStatus(engine.RunStatusOCRProgress)
+	if !run.TryClaim(engine.RunStatusOCRProgress) {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":  "This run is already being processed. Wait for it to finish or fail before starting again.",
+			"status": run.Status,
+		})
+		return
+	}
 	run.SetProgress(5)
 	run.AddLog(fmt.Sprintf("🚀 OCR Processing Started with Engine '%s' (Progress: 5%%)", run.OCRProvider))
 	store.Save(run)
@@ -552,7 +558,13 @@ func handleMergeAndConvert(uploadDir, outputDir string) gin.HandlerFunc {
 			return
 		}
 
-		run.SetStatus(engine.RunStatusMerging)
+		if !run.TryClaim(engine.RunStatusMerging) {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":  "This run is already being processed. Wait for it to finish or fail before starting again.",
+				"status": run.Status,
+			})
+			return
+		}
 		run.SetProgress(75)
 		run.AddLog("🔮 AI Structuring Engine Launched. Merging OCR Transcriptions... (Progress: 75%)")
 		store.Save(run)
@@ -626,8 +638,13 @@ func handleOneClickConvert(uploadDir, outputDir string) gin.HandlerFunc {
 			return
 		}
 
-		run.SetError("")
-		run.SetStatus(engine.RunStatusOCRProgress)
+		if !run.TryClaim(engine.RunStatusOCRProgress) {
+			c.JSON(http.StatusConflict, gin.H{
+				"error":  "This run is already being processed. Wait for it to finish or fail before starting again.",
+				"status": run.Status,
+			})
+			return
+		}
 		run.SetProgress(5)
 		run.AddLog(fmt.Sprintf("🚀 One-Click Conversion Engine Started/Retried with Provider '%s' (model: %s)", run.OCRProvider, run.OCRModel))
 		store.Save(run)
@@ -823,7 +840,8 @@ func handleUpdateWords(outputDir string) gin.HandlerFunc {
 			return
 		}
 
-		run.Words = payload.Words
+		// Through the setter, so this does not race the marshaller reading the same run.
+		run.SetWords(payload.Words)
 
 		jsonFileName := fmt.Sprintf("%s.json", run.ID)
 		docFileName := fmt.Sprintf("%s.doc", run.ID)
@@ -853,7 +871,7 @@ func handleUpdateTitle(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Title cannot be empty"})
 		return
 	}
-	run.Title = strings.TrimSpace(payload.Title)
+	run.SetTitle(strings.TrimSpace(payload.Title))
 	store.Save(run)
 	c.JSON(http.StatusOK, run)
 }
