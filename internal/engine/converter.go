@@ -10,6 +10,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -50,9 +51,7 @@ func NormalizePOS(rawPos string) string {
 }
 
 func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder bool, imagePaths []string, ocrProvider string, ocrModel string) ([]WordItem, error) {
-	targetBBoxScale := GetModelBBoxScale(ocrProvider, ocrModel)
-
-	fmt.Printf("[AI Structuring Engine] Launching with Provider: '%s', Model: '%s' (BBoxScale: %d)\n", ocrProvider, ocrModel, targetBBoxScale)
+	fmt.Printf("[AI Structuring Engine] Launching with Provider: '%s', Model: '%s'\n", ocrProvider, ocrModel)
 
 	// Stage 1: Multimodal Vision Format Analysis
 	var formatInstructions string
@@ -70,13 +69,19 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 		}
 	}
 
-	// Stage 2: Extract structured JSON using selected Provider & Model
+	// Stage 2: Extract structured JSON using selected Provider & Model.
+	//
+	// Every branch cleans exactly once, here. cleanWordItems used to run a second time
+	// inside parseStructuredJSONResponse, which re-scaled bounding boxes that were already
+	// normalized and destroyed them; see the comment on cleanWordItems.
 	if ocrProvider == "bedrock" {
 		fmt.Printf("[AI Structuring Stage 2] Calling AWS Bedrock Model '%s'...\n", ocrModel)
 		words, err := callBedrockForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
-		if err == nil && len(words) > 0 {
-			fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Bedrock '%s'\n", len(words), ocrModel)
-			return cleanWordItems(words, targetBBoxScale), nil
+		if err == nil {
+			if cleaned := cleanWordItems(words); len(cleaned) > 0 {
+				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Bedrock '%s'\n", len(cleaned), ocrModel)
+				return cleaned, nil
+			}
 		}
 		fmt.Printf("[AI Structuring Warning] Bedrock Model '%s' call failed or empty (%v). Trying Vertex fallback...\n", ocrModel, err)
 	}
@@ -85,28 +90,34 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 	fmt.Printf("[AI Structuring Stage 2] Calling GCP Vertex AI Model '%s'...\n", ocrModel)
 	if strings.Contains(ocrModel, "claude") {
 		words, err := callBedrockForJSON(ctx, "us.anthropic.claude-sonnet-4-6", mergedText, formatInstructions, imagePaths)
-		if err == nil && len(words) > 0 {
-			fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex/Anthropic '%s'\n", len(words), ocrModel)
-			return cleanWordItems(words, targetBBoxScale), nil
+		if err == nil {
+			if cleaned := cleanWordItems(words); len(cleaned) > 0 {
+				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex/Anthropic '%s'\n", len(cleaned), ocrModel)
+				return cleaned, nil
+			}
 		}
 	}
 	words, err := callVertexForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
-	if err == nil && len(words) > 0 {
-		fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex '%s'\n", len(words), ocrModel)
-		return cleanWordItems(words, targetBBoxScale), nil
+	if err == nil {
+		if cleaned := cleanWordItems(words); len(cleaned) > 0 {
+			fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex '%s'\n", len(cleaned), ocrModel)
+			return cleaned, nil
+		}
 	}
 
 	// 3. Fallback: Anthropic Direct API
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
 	if apiKey != "" {
 		words, err := callClaudeForJSON(ctx, apiKey, mergedText)
-		if err == nil && len(words) > 0 {
-			return cleanWordItems(words, targetBBoxScale), nil
+		if err == nil {
+			if cleaned := cleanWordItems(words); len(cleaned) > 0 {
+				return cleaned, nil
+			}
 		}
 	}
 
 	// 4. Regex Fallback Parser
-	return cleanWordItems(parseOCRTextFallback(mergedText, preserveOrder), targetBBoxScale), nil
+	return cleanWordItems(parseOCRTextFallback(mergedText, preserveOrder)), nil
 }
 
 // analyzeFormatWithImage sends up to 2 sample images to Gemini multimodal to understand
@@ -708,7 +719,7 @@ func parseStructuredJSONResponse(responseText string) ([]WordItem, error) {
 				container.Words[i].ImageHeight = wHeight
 			}
 		}
-		return cleanWordItems(container.Words, 1000), nil
+		return container.Words, nil
 	}
 
 	// 2. Direct array: [ {...}, {...} ]
@@ -722,7 +733,7 @@ func parseStructuredJSONResponse(responseText string) ([]WordItem, error) {
 				words[i].ImageHeight = 1000
 			}
 		}
-		return cleanWordItems(words, 1000), nil
+		return words, nil
 	}
 
 	return nil, fmt.Errorf("failed to unmarshal JSON response: %s", responseText)
@@ -878,11 +889,143 @@ func parseOCRTextFallback(text string, preserveOrder bool) []WordItem {
 	return words
 }
 
-func cleanWordItems(words []WordItem, targetBBoxScale int) []WordItem {
-	if targetBBoxScale <= 0 {
-		targetBBoxScale = 1000
+// BBoxOutputScale is the single coordinate space every WordItem.BBox leaves the engine in:
+// integer percentages of the source image, ordered [ymin, xmin, ymax, xmax].
+const BBoxOutputScale = 100
+
+// detectBBoxScale reports the maximum a coordinate can reach in the incoming boxes, which is
+// what a coordinate has to be measured against to become a percentage.
+//
+// The extraction prompts ask for 0-1000 normalized coordinates but also permit raw pixels
+// relative to imageWidth/imageHeight, so the incoming scale is detected rather than assumed —
+// GetModelBBoxScale cannot be used for this, since it claims 100 for Bedrock while the Bedrock
+// prompt asks for 0-1000. Detection looks at the whole batch because a single box near the
+// top-left corner is indistinguishable from a percentage box on its own.
+//
+// A refMax of BBoxOutputScale means the boxes are already percentages and normalization is a
+// no-op — that is what makes a second pass over already-clean items safe.
+func detectBBoxScale(words []WordItem) (refMax float64, pixels bool) {
+	maxVal := 0
+	for i := range words {
+		for _, v := range words[i].BBox {
+			if v > maxVal {
+				maxVal = v
+			}
+		}
+	}
+	switch {
+	case maxVal <= BBoxOutputScale:
+		return BBoxOutputScale, false
+	case maxVal <= 1000:
+		return 1000, false
+	default:
+		return float64(maxVal), true
+	}
+}
+
+// normalizeBBoxes rewrites every box to BBoxOutputScale in place.
+//
+// Boxes that arrive valid stay valid: rounding a very thin box could otherwise flatten it into
+// a degenerate one, which the caller would then mistake for missing data and overwrite with a
+// placeholder.
+func normalizeBBoxes(words []WordItem) {
+	refMax, pixels := detectBBoxScale(words)
+	if refMax == BBoxOutputScale {
+		return
 	}
 
+	toPct := func(v int, ref float64) int {
+		p := int(math.Round(float64(v) * BBoxOutputScale / ref))
+		if p < 0 {
+			return 0
+		}
+		if p > BBoxOutputScale {
+			return BBoxOutputScale
+		}
+		return p
+	}
+
+	for i := range words {
+		bbox := words[i].BBox
+		if len(bbox) < 4 {
+			continue
+		}
+
+		// Pixel coordinates need each axis measured against its own image dimension; the
+		// batch maximum is only a fallback for items that lost their reference frame.
+		refY, refX := refMax, refMax
+		if pixels {
+			if h := words[i].ImageHeight; h > 0 {
+				refY = float64(h)
+			}
+			if w := words[i].ImageWidth; w > 0 {
+				refX = float64(w)
+			}
+		}
+
+		wasValid := bbox[2] > bbox[0] && bbox[3] > bbox[1]
+		bbox[0], bbox[2] = toPct(bbox[0], refY), toPct(bbox[2], refY)
+		bbox[1], bbox[3] = toPct(bbox[1], refX), toPct(bbox[3], refX)
+
+		if wasValid {
+			if bbox[2] <= bbox[0] {
+				bbox[0], bbox[2] = thinSpan(bbox[0])
+			}
+			if bbox[3] <= bbox[1] {
+				bbox[1], bbox[3] = thinSpan(bbox[1])
+			}
+		}
+	}
+}
+
+// thinSpan widens a span that rounding collapsed to zero into the smallest visible one,
+// staying inside 0..BBoxOutputScale.
+func thinSpan(lo int) (int, int) {
+	if lo >= BBoxOutputScale {
+		return BBoxOutputScale - 1, BBoxOutputScale
+	}
+	return lo, lo + 1
+}
+
+// copyBBox isolates the caller's array and drops anything past the four coordinates the format
+// defines. A stray fifth element would otherwise keep its original magnitude through
+// normalization and then re-trigger scale detection on the next pass.
+func copyBBox(b []int) []int {
+	if len(b) > 4 {
+		b = b[:4]
+	}
+	return append([]int(nil), b...)
+}
+
+// bboxIsUsable reports whether a box is a well-formed rectangle already on BBoxOutputScale.
+// Anything else — too short, out of range, zero-area, inverted — is replaced by a placeholder,
+// which is what keeps the output invariant unconditional: coordinates always land in
+// 0..BBoxOutputScale and always describe a non-empty rectangle.
+func bboxIsUsable(bbox []int) bool {
+	if len(bbox) < 4 {
+		return false
+	}
+	for _, v := range bbox {
+		if v < 0 || v > BBoxOutputScale {
+			return false
+		}
+	}
+	if bbox[0] == 0 && bbox[1] == 0 && bbox[2] == 0 && bbox[3] == 0 {
+		return false
+	}
+	return bbox[2] > bbox[0] && bbox[3] > bbox[1]
+}
+
+// cleanWordItems filters noise, normalizes fields, and returns items whose bounding boxes
+// are always on BBoxOutputScale.
+//
+// It must stay idempotent: cleanWordItems(cleanWordItems(x)) has to equal cleanWordItems(x).
+// An earlier version broke that in two ways — it wrote placeholder boxes on the 0-1000 scale
+// while normalizing real ones to 0-100, so a second pass saw a max coordinate above 100 and
+// divided every box by 10 again; and it rescaled the caller's BBox arrays in place, so the
+// damage stuck to the input too. Both are why run_1785714340533 ended up with 18 boxes
+// collapsed into the 0-10 range and 12 replaced by placeholders.
+func cleanWordItems(words []WordItem) []WordItem {
 	var cleaned []WordItem
 	fallbackNo := 1
 	seenWords := make(map[string]bool)
@@ -941,13 +1084,18 @@ func cleanWordItems(words []WordItem, targetBBoxScale int) []WordItem {
 		meaningStr = strings.TrimLeft(meaningStr, " :;-=≠>")
 
 		cleaned = append(cleaned, WordItem{
-			No:         itemNo,
-			Word:       wordStr,
-			Pos:        posStr,
-			Meaning:    meaningStr,
-			BBox:       w.BBox,
-			ImageIndex: w.ImageIndex,
-			ImageName:  w.ImageName,
+			No:      itemNo,
+			Word:    wordStr,
+			Pos:     posStr,
+			Meaning: meaningStr,
+			// Copy the box: normalizeBBoxes rewrites it, and the caller's slice must not move.
+			BBox: copyBBox(w.BBox),
+			// ImageWidth/ImageHeight are the reference frame a pixel-scale box is relative
+			// to, so they have to survive the rebuild for normalization to interpret it.
+			ImageWidth:  w.ImageWidth,
+			ImageHeight: w.ImageHeight,
+			ImageIndex:  w.ImageIndex,
+			ImageName:   w.ImageName,
 		})
 	}
 
@@ -955,46 +1103,26 @@ func cleanWordItems(words []WordItem, targetBBoxScale int) []WordItem {
 		return cleaned[i].No < cleaned[j].No
 	})
 
-	// Strictly normalize all BBox coordinates to 0-100 Percentage Scale
-	maxVal := 0
-	for _, w := range cleaned {
-		for _, v := range w.BBox {
-			if v > maxVal {
-				maxVal = v
-			}
-		}
-	}
-
-	if maxVal > 100 {
-		for i := range cleaned {
-			for j := range cleaned[i].BBox {
-				cleaned[i].BBox[j] /= 10
-			}
-		}
-	}
+	normalizeBBoxes(cleaned)
 
 	totalCount := len(cleaned)
 	for i := range cleaned {
-		bbox := cleaned[i].BBox
-		isInvalid := len(bbox) < 4 || (bbox[0] == 0 && bbox[1] == 0 && bbox[2] == 0 && bbox[3] == 0) || bbox[2] <= bbox[0] || bbox[3] <= bbox[1]
-
-		if isInvalid {
-			topPct := 8
-			if totalCount > 1 {
-				topPct = 8 + int((float64(i)/float64(totalCount-1))*78.0)
-			}
-			heightPct := 5
-			bottomPct := topPct + heightPct
-			if bottomPct > 98 {
-				bottomPct = 98
-			}
-
-			if targetBBoxScale == 1000 {
-				cleaned[i].BBox = []int{topPct * 10, 50, bottomPct * 10, 950}
-			} else {
-				cleaned[i].BBox = []int{topPct, 5, bottomPct, 95}
-			}
+		if bboxIsUsable(cleaned[i].BBox) {
+			continue
 		}
+
+		// Evenly spaced placeholder so a row with no usable box is still selectable in the
+		// evidence viewer. It goes out on BBoxOutputScale like every other box — writing it
+		// on a different scale is what made a second pass corrupt the real boxes.
+		topPct := 8
+		if totalCount > 1 {
+			topPct = 8 + int((float64(i)/float64(totalCount-1))*78.0)
+		}
+		bottomPct := topPct + 5
+		if bottomPct > 98 {
+			bottomPct = 98
+		}
+		cleaned[i].BBox = []int{topPct, 5, bottomPct, 95}
 	}
 
 	// Assign differential sequential created timestamps for exact order preservation

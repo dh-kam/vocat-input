@@ -355,7 +355,9 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 			Status:        engine.RunStatusCreated,
 			OCRProvider:   ocrProvider,
 			OCRModel:      ocrModel,
-			BBoxScale:     engine.GetModelBBoxScale(ocrProvider, ocrModel),
+			// The scale the stored words are actually on, not the model's own coordinate
+			// space: the engine normalizes every bbox to percentages before persisting.
+			BBoxScale:     engine.BBoxOutputScale,
 			PreserveOrder: preserveOrder,
 			Images:        imagePaths,
 			OCRResults:    ocrResults,
