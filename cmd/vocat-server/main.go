@@ -568,50 +568,16 @@ func handleStartOCR(c *gin.Context) {
 	store.Save(run)
 
 	go func(r *engine.ConversionRun) {
-		provider, err := registry.Get(r.OCRProvider)
+		provider, err := resolveRunProvider(r)
 		if err != nil || provider == nil {
-			r.SetStatus(engine.RunStatusFailed)
-			r.SetError(fmt.Sprintf("OCR provider '%s' not found", r.OCRProvider))
-			r.AddLog(fmt.Sprintf("❌ OCR provider '%s' not found", r.OCRProvider))
-			store.Save(r)
+			failRun(r, fmt.Errorf("OCR provider '%s' not found", r.OCRProvider))
 			return
 		}
 		ctx := context.Background()
+		applyModelEnv(r)
 
-		// Set model env var so providers pick it up
-		if r.OCRModel != "" {
-			if r.OCRProvider == "bedrock" {
-				os.Setenv("BEDROCK_MODEL", r.OCRModel)
-			} else {
-				os.Setenv("VERTEX_MODEL", r.OCRModel)
-			}
-		}
-
-		total := len(r.Images)
-		for i, imgPath := range r.Images {
-			r.SetOCRResultStatus(i, "PROCESSING")
-			currentProg := 5 + int((float64(i)/float64(total))*65.0)
-			r.SetProgress(currentProg)
-			r.AddLog(fmt.Sprintf("📷 [%d/%d] Running OCR on '%s' (model: %s)... (Progress: %d%%)", i+1, total, r.OCRResults[i].ImageName, r.OCRModel, currentProg))
-			store.Save(r)
-
-			text, err := provider.ProcessImage(ctx, imgPath)
-			if err != nil {
-				r.SetOCRResultStatus(i, "FAILED")
-				r.SetOCRResultError(i, err.Error())
-				r.SetStatus(engine.RunStatusFailed)
-				r.SetError(fmt.Sprintf("OCR Failed on '%s': %v", r.OCRResults[i].ImageName, err))
-				r.AddLog(fmt.Sprintf("❌ [%d/%d] OCR Failed on '%s': %v", i+1, total, r.OCRResults[i].ImageName, err))
-				store.Save(r)
-				return
-			} else {
-				r.SetOCRResultStatus(i, "COMPLETED")
-				r.SetOCRResultText(i, text)
-				doneProg := 5 + int((float64(i+1)/float64(total))*65.0)
-				r.SetProgress(doneProg)
-				r.AddLog(fmt.Sprintf("✅ [%d/%d] OCR Completed on '%s' (Progress: %d%%)", i+1, total, r.OCRResults[i].ImageName, doneProg))
-			}
-			store.Save(r)
+		if err := runOCRPhase(r, provider, ctx); err != nil {
+			return
 		}
 
 		r.SetStatus(engine.RunStatusOCRDone)
@@ -643,57 +609,18 @@ func handleMergeAndConvert(uploadDir, outputDir string) gin.HandlerFunc {
 		run.AddLog("🔮 AI Structuring Engine Launched. Merging OCR Transcriptions... (Progress: 75%)")
 		store.Save(run)
 
-		var merged []string
-		for _, res := range run.OCRResults {
-			if res.RawText != "" {
-				merged = append(merged, res.RawText)
-			}
-		}
-		mergedText := strings.Join(merged, "\n\n")
-		run.SetMergedText(mergedText)
-		run.AddLog(fmt.Sprintf("📄 Merged OCR Text Prepared (%d total characters)", len(mergedText)))
-
 		ctx := context.Background()
-		run.SetProgress(80)
+		mergedText := mergeOCRResults(run)
+		imagePaths := buildImagePaths(run, uploadDir)
 
-		// Build image paths for Stage 1 format analysis
-		var imagePaths []string
-		for _, img := range run.Images {
-			if filepath.IsAbs(img) {
-				imagePaths = append(imagePaths, img)
-			} else {
-				imagePaths = append(imagePaths, filepath.Join(uploadDir, img))
-			}
-		}
-
-		run.AddLog(fmt.Sprintf("🔍 Stage 1: Analyzing image format with AI Vision (%d images)... (Progress: 80%%)", len(imagePaths)))
-		store.Save(run)
-
-		run.SetProgress(85)
-		run.AddLog("🤖 Stage 2: Extracting vocabulary with format-aware AI prompt... (Progress: 85%)")
-		words, err := engine.ConvertOCRToVocatJSON(ctx, mergedText, run.PreserveOrder, imagePaths, run.OCRProvider, run.OCRModel)
+		words, err := structureRun(run, ctx, mergedText, imagePaths)
 		if err != nil {
-			run.SetStatus(engine.RunStatusFailed)
-			run.SetError(fmt.Sprintf("Conversion failed: %v", err))
-			run.AddLog(fmt.Sprintf("❌ Conversion Failed: %v", err))
-			store.Save(run)
+			failRun(run, fmt.Errorf("Conversion failed: %w", err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": run.Error})
 			return
 		}
-		run.SetWords(words)
-		run.SetProgress(95)
-		run.AddLog(fmt.Sprintf("✨ AI Structuring Completed! %d Structured Words & Bounding Boxes Extracted (Progress: 95%%)", len(words)))
 
-		jsonFileName := fmt.Sprintf("%s.json", run.ID)
-		docFileName := fmt.Sprintf("%s.doc", run.ID)
-		jsonPath := filepath.Join(outputDir, jsonFileName)
-		docPath := filepath.Join(outputDir, docFileName)
-
-		jsonBytes, _ := json.MarshalIndent(words, "", "  ")
-		_ = os.WriteFile(jsonPath, jsonBytes, 0o644)
-		_ = engine.GenerateDocFile(words, docPath)
-
-		run.SetOutputPaths(fmt.Sprintf("/outputs/%s", jsonFileName), fmt.Sprintf("/outputs/%s", docFileName))
+		writeRunOutputs(run, outputDir, words)
 		run.SetStatus(engine.RunStatusCompleted)
 		run.SetProgress(100)
 		run.AddLog("🎉 Run Completed Successfully! Vocat JSON & DOC Test Sheets Ready (Progress: 100%)")
@@ -724,110 +651,35 @@ func handleOneClickConvert(uploadDir, outputDir string) gin.HandlerFunc {
 		store.Save(run)
 
 		go func(r *engine.ConversionRun) {
-			provider, err := registry.Get(r.OCRProvider)
+			provider, err := resolveRunProvider(r)
 			if err != nil || provider == nil {
-				r.SetStatus(engine.RunStatusFailed)
-				r.SetError(fmt.Sprintf("OCR provider '%s' not found", r.OCRProvider))
-				r.AddLog(fmt.Sprintf("❌ OCR provider '%s' not found", r.OCRProvider))
-				store.Save(r)
+				failRun(r, fmt.Errorf("OCR provider '%s' not found", r.OCRProvider))
 				return
 			}
 			ctx := context.Background()
+			applyModelEnv(r)
 
 			// Phase 1: Full OCR Recognition (5% -> 70%)
-			total := len(r.Images)
-			for i, imgPath := range r.Images {
-				r.SetOCRResultStatus(i, "PROCESSING")
-				currentProg := 5 + int((float64(i)/float64(total))*65.0)
-				r.SetProgress(currentProg)
-				r.AddLog(fmt.Sprintf("📷 [%d/%d] OCR Vision Processing '%s'... (%d%%)", i+1, total, r.OCRResults[i].ImageName, currentProg))
-				store.Save(r)
-
-				text, err := provider.ProcessImage(ctx, imgPath)
-				if err != nil {
-					r.SetOCRResultStatus(i, "FAILED")
-					r.SetOCRResultError(i, err.Error())
-					r.SetStatus(engine.RunStatusFailed)
-					r.SetError(fmt.Sprintf("OCR Failed on '%s': %v", r.OCRResults[i].ImageName, err))
-					r.AddLog(fmt.Sprintf("❌ [%d/%d] OCR Failed on '%s': %v", i+1, total, r.OCRResults[i].ImageName, err))
-					store.Save(r)
-					return
-				} else {
-					r.SetOCRResultStatus(i, "COMPLETED")
-					r.SetOCRResultText(i, text)
-					doneProg := 5 + int((float64(i+1)/float64(total))*65.0)
-					r.SetProgress(doneProg)
-					r.AddLog(fmt.Sprintf("✅ [%d/%d] OCR Completed on '%s' (%d%%)", i+1, total, r.OCRResults[i].ImageName, doneProg))
-
-					// Add Raw OCR preview snippet to log stream for trace comparison
-					snippet := strings.TrimSpace(text)
-					if len(snippet) > 180 {
-						snippet = snippet[:180] + "..."
-					}
-					snippet = strings.ReplaceAll(snippet, "\n", " ")
-					r.AddLog(fmt.Sprintf("  📄 [RAW OCR RESPONSE #%d]: \"%s\"", i+1, snippet))
-				}
-				store.Save(r)
+			if err := runOCRPhase(r, provider, ctx); err != nil {
+				return
 			}
 
+			// Phase 2: Merge & AI Structuring (75% -> 95%)
 			r.SetStatus(engine.RunStatusMerging)
 			r.SetProgress(75)
 			r.AddLog("🔮 AI Structuring Engine Launched. Merging Transcriptions... (75%)")
 			store.Save(r)
 
-			// Phase 2: Merge & AI Structuring (75% -> 95%)
-			var merged []string
-			for _, res := range r.OCRResults {
-				if res.RawText != "" {
-					merged = append(merged, res.RawText)
-				}
-			}
-			mergedText := strings.Join(merged, "\n\n")
-			r.SetMergedText(mergedText)
-
-			r.SetProgress(80)
-
-			// Build image paths for Stage 1
-			var imagePaths []string
-			for _, img := range r.Images {
-				if filepath.IsAbs(img) {
-					imagePaths = append(imagePaths, img)
-				} else {
-					imagePaths = append(imagePaths, filepath.Join(uploadDir, img))
-				}
-			}
-			r.AddLog(fmt.Sprintf("🔍 Stage 1: Analyzing image format (%d images)... (80%%)", len(imagePaths)))
-			store.Save(r)
-
-			r.SetProgress(85)
-			r.AddLog("🤖 Stage 2: Extracting vocabulary with format-aware AI prompt... (85%)")
-			words, err := engine.ConvertOCRToVocatJSON(ctx, mergedText, r.PreserveOrder, imagePaths, r.OCRProvider, r.OCRModel)
+			mergedText := mergeOCRResults(r)
+			imagePaths := buildImagePaths(r, uploadDir)
+			words, err := structureRun(r, ctx, mergedText, imagePaths)
 			if err != nil {
-				r.SetStatus(engine.RunStatusFailed)
-				r.SetError(fmt.Sprintf("Conversion failed: %v", err))
-				r.AddLog(fmt.Sprintf("❌ AI Structuring Failed: %v", err))
-				store.Save(r)
+				failRun(r, fmt.Errorf("Conversion failed: %w", err))
 				return
-			}
-			r.SetWords(words)
-			r.SetProgress(95)
-			r.AddLog(fmt.Sprintf("✨ AI Structuring Completed! %d Structured Words Extracted (95%%)", len(words)))
-			for _, w := range words {
-				meaningStr := fmt.Sprintf("%v", w.Meaning)
-				r.AddLog(fmt.Sprintf("  🏷️ [FINAL WORD #%d]: '%s' | POS: '%s' | Meaning: '%s' | BBox: %v", w.No, w.Word, w.Pos, meaningStr, w.BBox))
 			}
 
 			// Phase 3: Export JSON & DOC Files (100%)
-			jsonFileName := fmt.Sprintf("%s.json", r.ID)
-			docFileName := fmt.Sprintf("%s.doc", r.ID)
-			jsonPath := filepath.Join(outputDir, jsonFileName)
-			docPath := filepath.Join(outputDir, docFileName)
-
-			jsonBytes, _ := json.MarshalIndent(words, "", "  ")
-			_ = os.WriteFile(jsonPath, jsonBytes, 0o644)
-			_ = engine.GenerateDocFile(words, docPath)
-
-			r.SetOutputPaths(fmt.Sprintf("/outputs/%s", jsonFileName), fmt.Sprintf("/outputs/%s", docFileName))
+			writeRunOutputs(r, outputDir, words)
 			r.SetStatus(engine.RunStatusCompleted)
 			r.SetProgress(100)
 			r.AddLog("🎉 Full Pipeline Completed! Vocat JSON & DOC Test Sheets Ready (100%)")
