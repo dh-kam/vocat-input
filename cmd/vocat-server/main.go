@@ -226,6 +226,48 @@ func handleGetRun(c *gin.Context) {
 	c.JSON(http.StatusOK, run)
 }
 
+// resolveInDir joins a caller-supplied file name onto dir and confirms the result stays inside
+// it.
+//
+// Names arriving from a request are never trusted: the JSON branch of handleCreateRun used to
+// join them straight into a filesystem path, so {"images":["../../.env"]} became an absolute
+// path outside the storage tree that the OCR providers then read and handed to a vision API,
+// and that handleDeleteRun later unlinked. Every image this server stores is a flat file name,
+// so anything carrying a path separator is rejected outright rather than quietly rewritten -
+// a traversal attempt should fail loudly, not succeed against a different file.
+func resolveInDir(dir, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("empty file name")
+	}
+	if name != filepath.Base(name) || name == "." || name == ".." {
+		return "", fmt.Errorf("invalid file name %q", name)
+	}
+
+	full := filepath.Join(dir, name)
+	if !containedIn(dir, full) {
+		return "", fmt.Errorf("file name %q escapes the storage directory", name)
+	}
+	return full, nil
+}
+
+// containedIn reports whether path lives inside dir. Both are resolved to absolute paths first
+// so a stored path from an older run is compared on the same footing.
+func containedIn(dir, path string) bool {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return false
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(absDir, absPath)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 func handleCreateRun(uploadDir string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ocrProvider string
@@ -268,10 +310,20 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 				}
 			} else {
 				cwd, _ := os.Getwd()
+				sampleDir := filepath.Join(cwd, "imgs", "1")
 				for i, name := range req.Images {
-					imgPath := filepath.Join(cwd, "imgs", "1", name)
-					if _, err := os.Stat(imgPath); os.IsNotExist(err) {
-						imgPath = filepath.Join(uploadDir, name)
+					// The sample directory is tried first, then the upload directory; both
+					// resolutions are containment-checked, so a name that escapes either is
+					// refused rather than reaching the OCR providers' os.ReadFile.
+					imgPath, err := resolveInDir(sampleDir, name)
+					if err == nil {
+						if _, statErr := os.Stat(imgPath); os.IsNotExist(statErr) {
+							imgPath, err = resolveInDir(uploadDir, name)
+						}
+					}
+					if err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Rejected image name: %v", err)})
+						return
 					}
 					imagePaths = append(imagePaths, imgPath)
 					ocrResults = append(ocrResults, &engine.OCRResult{
@@ -314,7 +366,14 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 			}
 
 			for i, file := range files {
-				dst := filepath.Join(uploadDir, file.Filename)
+				// Go's multipart parser already reduces Filename to its base, but the
+				// destination goes through the same containment check as every other
+				// caller-supplied name so the guarantee lives in one place.
+				dst, err := resolveInDir(uploadDir, file.Filename)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Rejected upload name: %v", err)})
+					return
+				}
 				if err := c.SaveUploadedFile(file, dst); err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to save file %s: %v", file.Filename, err)})
 					return
@@ -338,13 +397,13 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 
 		runID := fmt.Sprintf("run_%d", time.Now().UnixNano()/1e6)
 		run := &engine.ConversionRun{
-			ID:            runID,
-			Title:         fmt.Sprintf("Vocat Run %s", time.Now().Format("01-02 15:04")),
-			CreatedAt:     time.Now(),
-			UpdatedAt:     time.Now(),
-			Status:        engine.RunStatusCreated,
-			OCRProvider:   ocrProvider,
-			OCRModel:      ocrModel,
+			ID:          runID,
+			Title:       fmt.Sprintf("Vocat Run %s", time.Now().Format("01-02 15:04")),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Status:      engine.RunStatusCreated,
+			OCRProvider: ocrProvider,
+			OCRModel:    ocrModel,
 			// The scale the stored words are actually on, not the model's own coordinate
 			// space: the engine normalizes every bbox to percentages before persisting.
 			BBoxScale:     engine.BBoxOutputScale,
@@ -751,11 +810,18 @@ func handleDeleteRun(uploadDir, outputDir string) gin.HandlerFunc {
 			return
 		}
 
-		// Delete uploaded images
+		// Delete uploaded images, but only files this server actually wrote. Unlinking a
+		// stored path unconditionally made run deletion a way to remove any file the process
+		// could reach, and it would also destroy source material under imgs/ that a run
+		// merely referenced.
 		for _, img := range run.Images {
 			imgPath := img
 			if !filepath.IsAbs(imgPath) {
 				imgPath = filepath.Join(uploadDir, img)
+			}
+			if !containedIn(uploadDir, imgPath) {
+				log.Printf("[delete run %s] skipping %s: outside the upload directory", id, imgPath)
+				continue
 			}
 			_ = os.Remove(imgPath)
 		}
@@ -821,4 +887,3 @@ func handleADBInput(c *gin.Context) {
 		"wordCount": len(run.Words),
 	})
 }
-
