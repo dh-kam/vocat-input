@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -38,8 +40,8 @@ func NewProviderRegistry() *ProviderRegistry {
 	bedrockProvider := &BedrockOCRProvider{}
 
 	doubleCheckProvider := &DoubleCheckOCRProvider{
-		EngineA: vertexProvider,   // 1st OCR: Google Cloud Vertex AI (Gemini 2.5 Flash)
-		EngineB: bedrockProvider,  // 2nd OCR: AWS Bedrock (Claude 3.5 Sonnet / Nova Vision)
+		EngineA: vertexProvider,  // 1st OCR: Google Cloud Vertex AI (Gemini)
+		EngineB: bedrockProvider, // 2nd OCR: AWS Bedrock (BEDROCK_MODEL, else the Nova candidates)
 	}
 
 	r.Register(dummyProvider)
@@ -50,11 +52,11 @@ func NewProviderRegistry() *ProviderRegistry {
 	r.Register(bedrockProvider)
 	r.Register(doubleCheckProvider)
 
-	// Fallback Chain: Vertex AI (Primary) -> Anthropic (Secondary) -> Dummy (Fallback)
+	// Fallback Chain: Vertex AI -> Anthropic. DummyOCRProvider is deliberately not a step here;
+	// it stays registered so it can be asked for by name for offline UI work, but it must never
+	// be reached by accident because its output is fabricated.
 	fallbackProvider := &FallbackChainOCRProvider{
-		Primary:   vertexProvider,
-		Secondary: anthropicProvider,
-		Fallback:  dummyProvider,
+		Providers: []OCRProvider{vertexProvider, anthropicProvider},
 	}
 	r.Register(fallbackProvider)
 
@@ -65,29 +67,56 @@ func (r *ProviderRegistry) Register(provider OCRProvider) {
 	r.providers[provider.Name()] = provider
 }
 
+// Get resolves a provider name, or a comma-separated list of them.
+//
+// An unrecognised name is an error rather than a silent substitution. It used to return the
+// fallback chain, so a typo like "bedrok" quietly ran a different engine with different
+// credentials, cost and latency — and until the dummy step was removed from that chain, a typo
+// combined with missing credentials produced fabricated vocabulary. Every caller already
+// handles the error, so those branches were simply unreachable.
 func (r *ProviderRegistry) Get(name string) (OCRProvider, error) {
 	parts := strings.Split(name, ",")
 	if len(parts) > 1 {
 		return r.GetMulti(parts)
 	}
 
-	p, ok := r.providers[strings.ToLower(strings.TrimSpace(name))]
+	key := strings.ToLower(strings.TrimSpace(name))
+	p, ok := r.providers[key]
 	if !ok {
-		return r.providers["fallback"], nil
+		return nil, fmt.Errorf("unknown OCR provider %q; available: %s", name, strings.Join(r.Names(), ", "))
 	}
 	return p, nil
 }
 
+// Names lists the registered provider names in sorted order, for error messages and help text.
+func (r *ProviderRegistry) Names() []string {
+	names := make([]string, 0, len(r.providers))
+	for n := range r.providers {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
 func (r *ProviderRegistry) GetMulti(names []string) (OCRProvider, error) {
 	var list []OCRProvider
+	var unknown []string
 	for _, n := range names {
 		n = strings.TrimSpace(n)
 		if p, ok := r.providers[strings.ToLower(n)]; ok {
 			list = append(list, p)
+		} else {
+			unknown = append(unknown, n)
 		}
 	}
+	// Dropping an unrecognised entry silently meant "vertex,bedrok" ran vertex alone with no
+	// indication the second engine was never consulted.
+	if len(unknown) > 0 {
+		return nil, fmt.Errorf("unknown OCR provider(s) %s; available: %s",
+			strings.Join(unknown, ", "), strings.Join(r.Names(), ", "))
+	}
 	if len(list) == 0 {
-		return r.providers["fallback"], nil
+		return nil, fmt.Errorf("no OCR providers given")
 	}
 	if len(list) == 1 {
 		return list[0], nil
@@ -158,33 +187,39 @@ func (d *DoubleCheckOCRProvider) ProcessImage(ctx context.Context, imagePath str
 }
 
 // ----------------------------------------------------
-// 0. Fallback Chain Provider (Vertex AI -> Anthropic -> Dummy)
+// 0. Fallback Chain Provider (Vertex AI -> Anthropic)
 // ----------------------------------------------------
+// FallbackChainOCRProvider tries each provider in order and returns the first non-empty
+// transcription.
+//
+// When every step fails it reports their errors. It used to end at DummyOCRProvider, whose five
+// hardcoded vocabulary entries were returned with a nil error, so a run with no working
+// credentials "succeeded" and shipped invented words through structuring, DOC export and
+// Telegram delivery with nothing surfaced to the user.
 type FallbackChainOCRProvider struct {
-	Primary   OCRProvider
-	Secondary OCRProvider
-	Fallback  OCRProvider
+	Providers []OCRProvider
 }
 
 func (f *FallbackChainOCRProvider) Name() string { return "fallback" }
 
 func (f *FallbackChainOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
-	log.Printf("[OCR Pipeline] Step 1: Trying Primary Vertex AI Vision API...")
-	text, err := f.Primary.ProcessImage(ctx, imagePath)
-	if err == nil && strings.TrimSpace(text) != "" {
-		log.Printf("[OCR Pipeline] Step 1 Success: Vertex AI Vision completed.")
-		return text, nil
+	var failures []error
+
+	for i, p := range f.Providers {
+		log.Printf("[OCR Pipeline] Step %d: trying %s...", i+1, p.Name())
+		text, err := p.ProcessImage(ctx, imagePath)
+		if err == nil && strings.TrimSpace(text) != "" {
+			log.Printf("[OCR Pipeline] Step %d success: %s completed.", i+1, p.Name())
+			return text, nil
+		}
+		if err == nil {
+			err = fmt.Errorf("returned an empty transcription")
+		}
+		log.Printf("[OCR Pipeline Warning] %s failed: %v", p.Name(), err)
+		failures = append(failures, fmt.Errorf("%s: %w", p.Name(), err))
 	}
 
-	log.Printf("[OCR Pipeline Warning] Vertex AI Vision failed (%v). Trying Step 2: Anthropic Claude Vision API...", err)
-	text, err = f.Secondary.ProcessImage(ctx, imagePath)
-	if err == nil && strings.TrimSpace(text) != "" {
-		log.Printf("[OCR Pipeline] Step 2 Success: Anthropic Claude Vision completed.")
-		return text, nil
-	}
-
-	log.Printf("[OCR Pipeline Warning] Anthropic Vision failed (%v). Falling back to Step 3: Local Engine...", err)
-	return f.Fallback.ProcessImage(ctx, imagePath)
+	return "", fmt.Errorf("every provider in the fallback chain failed: %w", errors.Join(failures...))
 }
 
 // getGoogleOCRAuth resolves API key or OAuth token for Google Gemini/Vertex OCR providers.
@@ -494,6 +529,21 @@ type AnthropicOCRProvider struct{}
 
 func (a *AnthropicOCRProvider) Name() string { return "anthropic" }
 
+// defaultAnthropicModel is the model the direct Anthropic API calls use unless ANTHROPIC_MODEL
+// overrides it. It was pinned to claude-3-5-sonnet-20241022, which Anthropic retired on
+// 2025-10-28: every request returned 404 not_found, so selecting the anthropic provider always
+// failed and it could never rescue a Vertex failure in the fallback chain. The sibling Vertex
+// and Bedrock providers have always been env-overridable; this one was not, which is why the
+// stale pin went unnoticed.
+const defaultAnthropicModel = "claude-sonnet-5"
+
+func anthropicModel() string {
+	if m := LookupConfig("ANTHROPIC_MODEL"); m != "" {
+		return m
+	}
+	return defaultAnthropicModel
+}
+
 func (a *AnthropicOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
 	if apiKey == "" {
@@ -515,7 +565,7 @@ func (a *AnthropicOCRProvider) ProcessImage(ctx context.Context, imagePath strin
 	base64Data := base64.StdEncoding.EncodeToString(imgBytes)
 
 	payload := map[string]interface{}{
-		"model":      "claude-3-5-sonnet-20241022",
+		"model":      anthropicModel(),
 		"max_tokens": 2048,
 		"messages": []map[string]interface{}{
 			{

@@ -737,7 +737,7 @@ Text:
 Return ONLY valid JSON array without any markdown formatting or code block.`, text)
 
 	payload := map[string]interface{}{
-		"model":      "claude-3-5-sonnet-20241022",
+		"model":      anthropicModel(),
 		"max_tokens": 4096,
 		"messages": []map[string]interface{}{
 			{
