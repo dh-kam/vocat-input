@@ -38,20 +38,23 @@ export default function RunDetail({
   const logContainerRef = useRef(null);
   const isAtBottomRef = useRef(true);
 
+  const sortByNo = (words) => [...words].sort((a, b) => (a.no || 0) - (b.no || 0));
+
   useEffect(() => {
+    // Never overwrite edits in progress. Every refetch hands down a fresh run.words array, so
+    // this effect re-runs on each one — the 350ms poll between progress 95 and 100, and every
+    // title save, DOC regeneration or Telegram send — and used to replace what the user had
+    // typed with the server copy mid-keystroke.
+    if (isEditing) return;
+
     if (run) {
-      if (Array.isArray(run.words) && run.words.length > 0) {
-        const sorted = [...run.words].sort((a, b) => (a.no || 0) - (b.no || 0));
-        setEditableWords(sorted);
-      } else {
-        setEditableWords([]);
-      }
+      setEditableWords(Array.isArray(run.words) && run.words.length > 0 ? sortByNo(run.words) : []);
       setTitleInput(run.title || run.id);
     } else {
       setEditableWords([]);
       setTitleInput('');
     }
-  }, [run?.id, run?.words]);
+  }, [run?.id, run?.words, isEditing]);
 
   // ESC Key listener for Edit Mode
   useEffect(() => {
@@ -59,7 +62,10 @@ export default function RunDetail({
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        const originalJson = JSON.stringify(run?.words || []);
+        // Compare against the same ordering editableWords was built with, otherwise a server
+        // response in any other order reads as an unsaved edit and the discard prompt appears
+        // even when nothing was touched.
+        const originalJson = JSON.stringify(sortByNo(run?.words || []));
         const currentJson = JSON.stringify(editableWords);
         if (originalJson !== currentJson) {
           setShowDiscardModal(true);
@@ -113,15 +119,21 @@ export default function RunDetail({
     );
   }
 
-  const filteredWords = (editableWords || []).filter((w) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    const wordMatch = w.word && w.word.toLowerCase().includes(q);
-    const meaningMatch = typeof w.meaning === 'string' && w.meaning.toLowerCase().includes(q);
-    const posMatch = w.pos && w.pos.toLowerCase().includes(q);
-    const noMatch = String(w.no || '').includes(q);
-    return wordMatch || meaningMatch || posMatch || noMatch;
-  });
+  // Each visible row carries its position in editableWords. The edit handlers write into that
+  // array, so passing them the filtered position instead would edit or delete a different word
+  // whenever a search is active — with words [apple, banana, cherry] and the query "cherry",
+  // the only visible row is at filtered index 0 and used to modify apple.
+  const filteredWords = (editableWords || [])
+    .map((word, index) => ({ word, index }))
+    .filter(({ word: w }) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      const wordMatch = w.word && w.word.toLowerCase().includes(q);
+      const meaningMatch = typeof w.meaning === 'string' && w.meaning.toLowerCase().includes(q);
+      const posMatch = w.pos && w.pos.toLowerCase().includes(q);
+      const noMatch = String(w.no || '').includes(q);
+      return wordMatch || meaningMatch || posMatch || noMatch;
+    });
 
   const guessPosFromMeaning = (meaning) => {
     if (!meaning || typeof meaning !== 'string') return null;
@@ -166,7 +178,10 @@ export default function RunDetail({
   };
 
   const handleAddWord = () => {
-    const nextNo = editableWords.length + 1;
+    // One past the highest existing number, not the row count: after a deletion the count is
+    // lower than the largest `no`, and reusing it produced duplicates that then broke the
+    // sort order and the unsaved-changes comparison.
+    const nextNo = editableWords.reduce((max, w) => Math.max(max, w.no || 0), 0) + 1;
     setEditableWords([...editableWords, { no: nextNo, word: '', pos: '명', meaning: '' }]);
   };
 
@@ -620,9 +635,9 @@ export default function RunDetail({
                     </td>
                   </tr>
                 ) : (
-                  filteredWords.map((wordItem, idx) => (
-                    <tr 
-                      key={idx}
+                  filteredWords.map(({ word: wordItem, index }) => (
+                    <tr
+                      key={index}
                       onClick={() => !isEditing && setSelectedWord(wordItem)}
                       className={`transition-colors cursor-pointer ${
                         selectedWord?.word === wordItem.word 
@@ -630,14 +645,14 @@ export default function RunDetail({
                           : 'hover:bg-slate-50/80'
                       }`}
                     >
-                      <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-500 text-sm">{wordItem.no || idx + 1}</td>
+                      <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-500 text-sm">{wordItem.no || index + 1}</td>
                       
                       <td className="py-2.5 px-4">
                         {isEditing ? (
                           <input 
                             type="text" 
                             value={wordItem.word}
-                            onChange={(e) => handleWordChange(idx, 'word', e.target.value)}
+                            onChange={(e) => handleWordChange(index, 'word', e.target.value)}
                             className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-sky-500"
                           />
                         ) : (
@@ -650,7 +665,7 @@ export default function RunDetail({
                           <div className="flex justify-center">
                             <select
                               value={wordItem.pos || '명'}
-                              onChange={(e) => handleWordChange(idx, 'pos', e.target.value)}
+                              onChange={(e) => handleWordChange(index, 'pos', e.target.value)}
                               className="w-7 h-7 rounded-full bg-purple-50 border border-purple-300 text-center font-black text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500/30 text-xs shadow-xs cursor-pointer appearance-none flex items-center justify-center pl-1.5"
                               title="품사 선택"
                             >
@@ -678,7 +693,7 @@ export default function RunDetail({
                           <input 
                             type="text" 
                             value={wordItem.meaning}
-                            onChange={(e) => handleWordChange(idx, 'meaning', e.target.value)}
+                            onChange={(e) => handleWordChange(index, 'meaning', e.target.value)}
                             className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-900 focus:outline-none focus:border-sky-500"
                           />
                         ) : (
@@ -710,7 +725,7 @@ export default function RunDetail({
                       {isEditing && (
                         <td className="py-2.5 px-4 text-center">
                           <button 
-                            onClick={(e) => { e.stopPropagation(); handleDeleteWord(idx); }}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteWord(index); }}
                             className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors"
                           >
                             <Trash2 className="w-4.5 h-4.5" />
