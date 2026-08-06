@@ -106,7 +106,7 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 	}
 
 	// 3. Fallback: Anthropic Direct API
-	apiKey := os.Getenv("ANTHROPIC_API_KEY")
+	apiKey := LookupConfig("ANTHROPIC_API_KEY")
 	if apiKey != "" {
 		words, err := callClaudeForJSON(ctx, apiKey, mergedText)
 		if err == nil {
@@ -192,7 +192,7 @@ OCR TEXT SAMPLE:
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	modelName := os.Getenv("VERTEX_MODEL")
+	modelName := LookupConfig("VERTEX_MODEL")
 	if modelName == "" {
 		modelName = "gemini-2.5-flash"
 	}
@@ -244,18 +244,18 @@ OCR TEXT SAMPLE:
 // isAPIKey=false when using OAuth token (aiplatform endpoint).
 func getVertexCredentials(ctx context.Context) (token, projectID, location string, isAPIKey bool) {
 	// 1. Check for API key first (Gemini API / AI Studio style)
-	token = os.Getenv("VERTEX_AI_API_KEY")
+	token = LookupConfig("VERTEX_AI_API_KEY")
 	if token == "" {
-		token = os.Getenv("VERTEX_API_KEY")
+		token = LookupConfig("VERTEX_API_KEY")
 	}
 	if token != "" {
 		isAPIKey = true
 		// API key doesn't need projectID/location but set defaults anyway
-		projectID = os.Getenv("GCP_PROJECT_ID")
+		projectID = LookupConfig("GCP_PROJECT_ID")
 		if projectID == "" {
 			projectID = "c0de1ab-dev-494714"
 		}
-		location = os.Getenv("GCP_LOCATION")
+		location = LookupConfig("GCP_LOCATION")
 		if location == "" {
 			location = "us-central1"
 		}
@@ -263,7 +263,7 @@ func getVertexCredentials(ctx context.Context) (token, projectID, location strin
 	}
 
 	// 2. OAuth token flow (Vertex AI)
-	token = os.Getenv("GCLOUD_ACCESS_TOKEN")
+	token = LookupConfig("GCLOUD_ACCESS_TOKEN")
 	if token == "" {
 		cmd := exec.CommandContext(ctx, "gcloud", "auth", "print-access-token")
 		out, err := cmd.Output()
@@ -272,7 +272,7 @@ func getVertexCredentials(ctx context.Context) (token, projectID, location strin
 		}
 	}
 
-	projectID = os.Getenv("GCP_PROJECT_ID")
+	projectID = LookupConfig("GCP_PROJECT_ID")
 	if projectID == "" {
 		cmd := exec.CommandContext(ctx, "gcloud", "config", "get-value", "project")
 		out, err := cmd.Output()
@@ -284,7 +284,7 @@ func getVertexCredentials(ctx context.Context) (token, projectID, location strin
 		projectID = "c0de1ab-dev-494714"
 	}
 
-	location = os.Getenv("GCP_LOCATION")
+	location = LookupConfig("GCP_LOCATION")
 	if location == "" {
 		location = "us-central1"
 	}
@@ -432,7 +432,7 @@ Text:
 
 	jsonPayload, _ := json.Marshal(payload)
 	if modelName == "" {
-		modelName = os.Getenv("VERTEX_MODEL")
+		modelName = LookupConfig("VERTEX_MODEL")
 	}
 	if modelName == "" {
 		modelName = "gemini-2.5-flash"

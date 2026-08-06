@@ -123,7 +123,7 @@ func main() {
 		c.File(filepath.Join(webDistDir, "index.html"))
 	})
 
-	port := os.Getenv("PORT")
+	port := engine.LookupConfig("PORT")
 	if port == "" {
 		port = "8080"
 	}

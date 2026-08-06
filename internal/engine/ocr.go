@@ -230,7 +230,7 @@ func getGoogleOCRAuth(ctx context.Context) (token, projectID, location string, i
 	}
 
 	// 2. OAuth token fallback (gcloud auth print-access-token)
-	token = os.Getenv("GCLOUD_ACCESS_TOKEN")
+	token = LookupConfig("GCLOUD_ACCESS_TOKEN")
 	if token == "" {
 		cmd := exec.CommandContext(ctx, "gcloud", "auth", "print-access-token")
 		out, err := cmd.Output()
@@ -239,7 +239,7 @@ func getGoogleOCRAuth(ctx context.Context) (token, projectID, location string, i
 		}
 	}
 
-	projectID = os.Getenv("GCP_PROJECT_ID")
+	projectID = LookupConfig("GCP_PROJECT_ID")
 	if projectID == "" {
 		cmd := exec.CommandContext(ctx, "gcloud", "config", "get-value", "project")
 		out, err := cmd.Output()
@@ -251,7 +251,7 @@ func getGoogleOCRAuth(ctx context.Context) (token, projectID, location string, i
 		projectID = "c0de1ab-dev-494714"
 	}
 
-	location = os.Getenv("GCP_LOCATION")
+	location = LookupConfig("GCP_LOCATION")
 	if location == "" {
 		location = "us-central1"
 	}
@@ -317,7 +317,7 @@ CRITICAL RULES FOR TRANSCRIPTION:
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	modelName := os.Getenv("VERTEX_MODEL")
+	modelName := LookupConfig("VERTEX_MODEL")
 	if modelName == "" {
 		modelName = "gemini-2.5-flash"
 	}
@@ -460,7 +460,7 @@ Transcribe all text from this image accurately while preserving structural layou
 		return "", fmt.Errorf("marshal bedrock payload: %w", err)
 	}
 
-	region := os.Getenv("AWS_REGION")
+	region := LookupConfig("AWS_REGION")
 	if region == "" {
 		region = "us-east-1"
 	}
@@ -470,7 +470,7 @@ Transcribe all text from this image accurately while preserving structural layou
 		"amazon.nova-pro-v1:0",
 		"us.amazon.nova-lite-v1:0",
 	}
-	if envModel := os.Getenv("BEDROCK_MODEL"); envModel != "" {
+	if envModel := LookupConfig("BEDROCK_MODEL"); envModel != "" {
 		candidateModels = append([]string{envModel}, candidateModels...)
 	}
 
@@ -545,7 +545,7 @@ func anthropicModel() string {
 }
 
 func (a *AnthropicOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
-	apiKey := os.Getenv("ANTHROPIC_API_KEY")
+	apiKey := LookupConfig("ANTHROPIC_API_KEY")
 	if apiKey == "" {
 		return "", fmt.Errorf("ANTHROPIC_API_KEY not set")
 	}
@@ -589,7 +589,7 @@ func (a *AnthropicOCRProvider) ProcessImage(ctx context.Context, imagePath strin
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	baseURL := os.Getenv("ANTHROPIC_BASE_URL")
+	baseURL := LookupConfig("ANTHROPIC_BASE_URL")
 	if baseURL == "" {
 		baseURL = "https://api.anthropic.com"
 	}
@@ -638,7 +638,7 @@ type GCPVisionOCRProvider struct{}
 func (g *GCPVisionOCRProvider) Name() string { return "gcp" }
 
 func (g *GCPVisionOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
-	apiKey := os.Getenv("GCP_VISION_API_KEY")
+	apiKey := LookupConfig("GCP_VISION_API_KEY")
 	if apiKey == "" {
 		return "", fmt.Errorf("GCP_VISION_API_KEY not set")
 	}
