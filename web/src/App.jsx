@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as Toast from '@radix-ui/react-toast';
 import { Sparkles, CheckCircle2, AlertCircle, Layers, ChevronDown } from 'lucide-react';
 import RunList from './components/RunList';
@@ -72,12 +72,22 @@ export default function App({ embedded = false, apiBase } = {}) {
     }
   };
 
+  // Which run the UI is currently meant to be showing. A detail response that arrives after
+  // the selection moved on is discarded: clearing the interval stops future ticks but not a
+  // request already in flight, so a slow response for run A could land after run B's and leave
+  // the panel showing A while the sidebar highlighted B. RunDetail's handlers act on run.id, so
+  // an edit made in that state would have been written to the wrong run.
+  const requestedRunIdRef = useRef(null);
+
   const fetchRunDetail = async (id) => {
     if (!id) return;
+    requestedRunIdRef.current = id;
     try {
       const res = await fetch(`${resolvedApiBase}/runs/${id}`, { credentials: 'include' });
+      if (requestedRunIdRef.current !== id) return;
       if (res.ok) {
         const data = await res.json();
+        if (requestedRunIdRef.current !== id) return;
         setSelectedRun(data || null);
       }
     } catch (err) {
@@ -91,6 +101,7 @@ export default function App({ embedded = false, apiBase } = {}) {
 
   useEffect(() => {
     // Clear previous run data immediately to prevent stale display
+    requestedRunIdRef.current = selectedRunId;
     setSelectedRun(null);
     if (selectedRunId) {
       fetchRunDetail(selectedRunId);
@@ -100,10 +111,16 @@ export default function App({ embedded = false, apiBase } = {}) {
   // Live polling only when conversion is actively in progress
   useEffect(() => {
     if (!selectedRunId || !selectedRun) return;
-    const isProcessing = 
+    // A partial progress value alone is not enough: the server marks runs FAILED without
+    // resetting progress, and the effect's dependencies never change again for a settled run,
+    // so an interval started on that basis polled roughly nine requests a second forever.
+    const isProcessing =
       selectedRun.status === 'OCR_IN_PROGRESS' ||
       selectedRun.status === 'MERGING_CONVERTING' ||
-      (selectedRun.progress > 0 && selectedRun.progress < 100);
+      (selectedRun.status !== 'FAILED' &&
+        selectedRun.status !== 'COMPLETED' &&
+        selectedRun.progress > 0 &&
+        selectedRun.progress < 100);
     if (!isProcessing) return;
     const interval = setInterval(() => {
       fetchRunDetail(selectedRunId);
