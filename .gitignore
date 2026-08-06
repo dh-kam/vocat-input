@@ -5,6 +5,7 @@
 /ocr_web
 /test-clean
 /roundtrip-test
+/reconvert
 
 # Environment & Secrets
 .env
@@ -19,6 +20,7 @@ storage/uploads/*
 storage/outputs/*
 !storage/outputs/.gitkeep
 storage/runs_db.json
+storage/runs_db.json.bak*
 
 # Web Node modules & build artifacts
 web/node_modules/
