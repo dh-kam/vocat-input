@@ -9,15 +9,23 @@ import {
 import { CroppedEvidenceThumbnail, InteractiveRedBoxModal } from './BoundingBoxViewer';
 import DocPreviewModal from './DocPreviewModal';
 
-export default function RunDetail({ 
-  run, 
-  onOneClickConvert, 
-  onRegenerateDoc, 
-  onSendTelegram, 
+export default function RunDetail({
+  run,
+  apiBase = '/api',
+  onOneClickConvert,
+  onRegenerateDoc,
+  onSendTelegram,
   onUpdateWords,
   onUpdateTitle,
-  onTriggerADB 
+  onTriggerADB
 }) {
+  // The API and the /uploads, /outputs asset routes share an origin. Deriving the asset root from
+  // apiBase keeps them on the right host whether the app is served same-origin (apiBase = "/api"
+  // -> assetBase = "") or embedded cross-origin (apiBase = "http://host:8080/api" -> that host).
+  // The previous code hardcoded http://localhost:8080, which broke whenever the port differed and
+  // kept /uploads and /outputs impossible to put behind auth.
+  const assetBase = apiBase.replace(/\/api\/?$/, '');
+
   const [editableWords, setEditableWords] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -201,7 +209,7 @@ export default function RunDetail({
 
   const handleDownloadDoc = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/runs/${run.id}/download/doc`, {
+      const res = await fetch(`${apiBase}/runs/${run.id}/download/doc`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('DOC download failed');
@@ -222,7 +230,7 @@ export default function RunDetail({
 
   const handlePreviewDoc = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/runs/${run.id}/download/doc`, {
+      const res = await fetch(`${apiBase}/runs/${run.id}/download/doc`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('DOC preview failed');
@@ -237,7 +245,7 @@ export default function RunDetail({
 
   const handleDownloadJSON = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/runs/${run.id}/download/json`, {
+      const res = await fetch(`${apiBase}/runs/${run.id}/download/json`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('JSON download failed');
@@ -703,8 +711,8 @@ export default function RunDetail({
 
                       <td className="py-2.5 px-4 text-center">
                         {getSourceImageForWord(wordItem) ? (
-                          <CroppedEvidenceThumbnail 
-                            imageUrl={`http://localhost:8080/uploads/${getSourceImageForWord(wordItem).imageName}`}
+                          <CroppedEvidenceThumbnail
+                            imageUrl={`${assetBase}/uploads/${getSourceImageForWord(wordItem).imageName}`}
                             bbox={wordItem.bbox || wordItem.bBox}
                             bboxScale={run.bboxScale}
                             imageWidth={wordItem.imageWidth}
@@ -753,7 +761,7 @@ export default function RunDetail({
                   </span>
                 </div>
                 <div className="h-48 rounded-xl overflow-hidden bg-white border border-slate-200 relative">
-                  <img src={`http://localhost:8080/uploads/${ocr.imageName}`} alt={ocr.imageName} className="w-full h-full object-contain" />
+                  <img src={`${assetBase}/uploads/${ocr.imageName}`} alt={ocr.imageName} className="w-full h-full object-contain" />
                 </div>
                 <pre className="p-3.5 rounded-xl bg-white text-xs font-mono text-slate-700 overflow-x-auto max-h-36 border border-slate-200">
                   {ocr.rawText || 'No text extracted'}
@@ -837,10 +845,10 @@ export default function RunDetail({
           wordItem={selectedWord}
           words={editableWords}
           bboxScale={run.bboxScale}
-          imageUrl={`http://localhost:8080/uploads/${getSourceImageForWord(selectedWord).imageName}`}
+          imageUrl={`${assetBase}/uploads/${getSourceImageForWord(selectedWord).imageName}`}
           getImageUrl={(w) => {
             const img = getSourceImageForWord(w);
-            return img ? `http://localhost:8080/uploads/${img.imageName}` : '';
+            return img ? `${assetBase}/uploads/${img.imageName}` : '';
           }}
           onSelectWord={(w) => setSelectedWord(w)}
           onClose={() => setSelectedWord(null)}

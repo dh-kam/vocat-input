@@ -1,9 +1,10 @@
-# Binary outputs
-vocat-server
-vocat-cli
-ocr_web
-test-clean
-roundtrip-test
+# Binary outputs. Anchored to the repo root: an unanchored "vocat-server" also matched the
+# cmd/vocat-server source directory, which silently ignored every new file added there.
+/vocat-server
+/vocat-cli
+/ocr_web
+/test-clean
+/roundtrip-test
 
 # Environment & Secrets
 .env

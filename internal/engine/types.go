@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 )
@@ -72,19 +71,6 @@ type ConversionRun struct {
 	JSONPath      string       `json:"jsonPath,omitempty"`
 	DocPath       string       `json:"docPath,omitempty"`
 	Error         string       `json:"error,omitempty"`
-}
-
-func GetModelBBoxScale(provider, model string) int {
-	p := strings.ToLower(provider)
-	m := strings.ToLower(model)
-
-	if p == "vertex" || p == "gemini" || strings.Contains(m, "gemini") {
-		return 1000
-	}
-	if p == "bedrock" || strings.Contains(m, "nova") || strings.Contains(m, "claude") {
-		return 100
-	}
-	return 1000
 }
 
 // MarshalJSON serializes the run while holding its own mutex.

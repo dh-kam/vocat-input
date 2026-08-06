@@ -398,6 +398,7 @@ export default function App({ embedded = false, apiBase } = {}) {
           <section className="h-full">
             <RunDetail
               run={selectedRun}
+              apiBase={resolvedApiBase}
               onOneClickConvert={handleOneClickConvert}
               onRegenerateDoc={handleRegenerateDoc}
               onSendTelegram={handleSendTelegram}

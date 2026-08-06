@@ -886,9 +886,9 @@ const BBoxOutputScale = 100
 // what a coordinate has to be measured against to become a percentage.
 //
 // The extraction prompts ask for 0-1000 normalized coordinates but also permit raw pixels
-// relative to imageWidth/imageHeight, so the incoming scale is detected rather than assumed —
-// GetModelBBoxScale cannot be used for this, since it claims 100 for Bedrock while the Bedrock
-// prompt asks for 0-1000. Detection looks at the whole batch because a single box near the
+// relative to imageWidth/imageHeight, and the per-provider scale is not knowable from the model
+// name (the Bedrock prompt, for instance, asks for 0-1000). So the incoming scale is detected
+// rather than assumed. Detection looks at the whole batch because a single box near the
 // top-left corner is indistinguishable from a percentage box on its own.
 //
 // A refMax of BBoxOutputScale means the boxes are already percentages and normalization is a

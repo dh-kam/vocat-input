@@ -134,6 +134,10 @@ func TestAnthropicModel_DefaultIsNotTheRetiredPin(t *testing.T) {
 }
 
 func TestAnthropicModel_EnvOverride(t *testing.T) {
+	// The "no override" branch must be exercised explicitly: the harness running these tests can
+	// export ANTHROPIC_MODEL for unrelated reasons, which would otherwise make the default-value
+	// assertion fail for the wrong reason.
+	t.Setenv("ANTHROPIC_MODEL", "")
 	assert.Equal(t, defaultAnthropicModel, anthropicModel())
 
 	t.Setenv("ANTHROPIC_MODEL", "claude-opus-5")

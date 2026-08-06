@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -62,9 +63,16 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	r.Static("/uploads", uploadDir)
-	r.Static("/outputs", outputDir)
 	r.Static("/assets", filepath.Join(webDistDir, "assets"))
+
+	// /uploads and /outputs hold user material — source photographs and generated word sheets — so
+	// they sit behind the same session as the API rather than on the open root engine. Same-origin
+	// requests carry the cookie automatically, which covers the SPA's <img>, canvas and fetch reads.
+	// They stay on the root engine (not under /api) to preserve the URL shape the frontend builds.
+	guarded := r.Group("")
+	guarded.Use(AuthMiddleware())
+	guarded.Static("/uploads", uploadDir)
+	guarded.Static("/outputs", outputDir)
 
 	// Explicit Static Handlers with Content-Type header for Vite Module Federation
 	r.GET("/remoteEntry.js", func(c *gin.Context) {
@@ -84,7 +92,9 @@ func main() {
 	api := r.Group("/api")
 	{
 		// Public Auth Endpoints
-		api.POST("/login", handleLogin)
+		// /login is rate-limited per client IP; the browser flow never calls it (serveSPA issues
+		// its cookie), so legitimate traffic is essentially zero and the limit is no burden.
+		api.POST("/login", rateLimitByIP(newIPLimiter(10, time.Minute)), handleLogin)
 		api.POST("/logout", handleLogout)
 		api.GET("/auth/status", handleAuthStatus)
 
@@ -325,6 +335,32 @@ func containedIn(dir, path string) bool {
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// Limits and the image extension allowlist for multipart uploads. These bound the disk and memory
+// a single create-run request can claim and keep non-image files out of a directory the OCR
+// providers will hand to vision APIs and the server will serve back over /uploads.
+const (
+	maxUploadImages = 30
+	maxImageBytes   = 32 << 20  // 32 MiB per image
+	maxUploadBytes  = 256 << 20 // 256 MiB total per request
+)
+
+var allowedImageExt = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true, ".bmp": true, ".heic": true,
+}
+
+// validateImageUpload rejects oversized or non-image uploads before they reach disk. The extension
+// is the gate rather than MIME sniffing because r.Static types files by extension anyway, so a
+// .jpg-named HTML payload is served as image/jpeg and never executed by the browser.
+func validateImageUpload(file *multipart.FileHeader) error {
+	if file.Size > maxImageBytes {
+		return fmt.Errorf("file is %d bytes, maximum %d", file.Size, maxImageBytes)
+	}
+	if !allowedImageExt[strings.ToLower(filepath.Ext(file.Filename))] {
+		return fmt.Errorf("unsupported file type (allowed: jpg, jpeg, png, webp, gif, bmp, heic)")
+	}
+	return nil
+}
+
 func handleCreateRun(uploadDir string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ocrProvider string
@@ -332,6 +368,22 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 		var preserveOrder bool = true
 		var imagePaths []string
 		var ocrResults []*engine.OCRResult
+
+		// runID is minted up front so the stored upload files can be namespaced under it below,
+		// which is what keeps two runs that both upload "photo.jpg" from clobbering each other's
+		// file on disk while both OCRResults keep pointing at the one surviving copy.
+		//
+		// The millisecond timestamp alone is not a unique key: two create-run requests landing in
+		// the same millisecond used to collide on it, which made the second Save overwrite the first
+		// run in the store and both runs' uploads write the same file. The random suffix makes the
+		// id — and therefore the primary key and the namespaced file name — unique without giving up
+		// the human-readable timestamp.
+		var idRand [4]byte
+		if _, err := rand.Read(idRand[:]); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to allocate run id"})
+			return
+		}
+		runID := fmt.Sprintf("run_%d_%x", time.Now().UnixNano()/1e6, idRand[:])
 
 		contentType := c.ContentType()
 
@@ -392,6 +444,14 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 				}
 			}
 		} else {
+			// Multipart is the path untrusted bytes arrive on, so the guards live here: a bounded
+			// count, a per-file size cap, an image-only extension allowlist, and a run-scoped
+			// stored name. Browsers always send Content-Length, so rejecting oversized bodies up
+			// front avoids buffering gigabytes to a temp file before the per-file check runs.
+			if c.Request.ContentLength > maxUploadBytes {
+				c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": fmt.Sprintf("Upload too large: maximum %d bytes per request", maxUploadBytes)})
+				return
+			}
 			form, err := c.MultipartForm()
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid form data"})
@@ -401,6 +461,10 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 			files := form.File["images"]
 			if len(files) == 0 {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "No image files uploaded"})
+				return
+			}
+			if len(files) > maxUploadImages {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Too many images: maximum %d per run", maxUploadImages)})
 				return
 			}
 
@@ -422,11 +486,22 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 				ocrModel = models[0]
 			}
 
+			// Validate every file before writing any, so a rejected upload at index N does not
+			// leave the files at 0..N-1 written to disk under a run that is then never created.
+			for _, file := range files {
+				if err := validateImageUpload(file); err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Rejected upload %q: %v", file.Filename, err)})
+					return
+				}
+			}
+
 			for i, file := range files {
-				// Go's multipart parser already reduces Filename to its base, but the
-				// destination goes through the same containment check as every other
-				// caller-supplied name so the guarantee lives in one place.
-				dst, err := resolveInDir(uploadDir, file.Filename)
+				// Store under a run-scoped name so concurrent or later runs cannot overwrite each
+				// other's source material. The index disambiguates two files in the same run that
+				// share a client filename. Go's multipart parser already reduces Filename to its
+				// base, and resolveInDir re-checks containment, so the prefix keeps it a flat name.
+				storedName := fmt.Sprintf("%s-%d-%s", runID, i, file.Filename)
+				dst, err := resolveInDir(uploadDir, storedName)
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Rejected upload name: %v", err)})
 					return
@@ -438,8 +513,8 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 				imagePaths = append(imagePaths, dst)
 				ocrResults = append(ocrResults, &engine.OCRResult{
 					ImageIndex: i + 1,
-					ImageName:  file.Filename,
-					ImagePath:  fmt.Sprintf("/uploads/%s", file.Filename),
+					ImageName:  storedName,
+					ImagePath:  fmt.Sprintf("/uploads/%s", storedName),
 					Status:     "PENDING",
 				})
 			}
@@ -452,7 +527,6 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 			ocrModel = "gemini-2.5-flash"
 		}
 
-		runID := fmt.Sprintf("run_%d", time.Now().UnixNano()/1e6)
 		run := &engine.ConversionRun{
 			ID:          runID,
 			Title:       fmt.Sprintf("Vocat Run %s", time.Now().Format("01-02 15:04")),
