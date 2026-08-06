@@ -20,16 +20,7 @@ import (
 )
 
 func callDirectVisionOCR(ctx context.Context, cropPath string) (string, error) {
-	bearerToken := os.Getenv("AWS_BEARER_TOKEN_BEDROCK")
-	if bearerToken == "" {
-		if envData, err := os.ReadFile(".env"); err == nil {
-			for _, line := range strings.Split(string(envData), "\n") {
-				if strings.HasPrefix(line, "AWS_BEARER_TOKEN_BEDROCK=") {
-					bearerToken = strings.TrimSpace(strings.Split(line, "=")[1])
-				}
-			}
-		}
-	}
+	bearerToken := engine.LookupConfig("AWS_BEARER_TOKEN_BEDROCK")
 	if bearerToken == "" {
 		return "", fmt.Errorf("AWS_BEARER_TOKEN_BEDROCK not set")
 	}

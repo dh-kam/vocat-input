@@ -481,18 +481,7 @@ Text:
 }
 
 func getBedrockBearerToken() string {
-	token := os.Getenv("AWS_BEARER_TOKEN_BEDROCK")
-	if token != "" {
-		return token
-	}
-	if envData, err := os.ReadFile(".env"); err == nil {
-		for _, line := range strings.Split(string(envData), "\n") {
-			if strings.HasPrefix(line, "AWS_BEARER_TOKEN_BEDROCK=") {
-				return strings.TrimSpace(strings.Split(line, "=")[1])
-			}
-		}
-	}
-	return ""
+	return LookupConfig("AWS_BEARER_TOKEN_BEDROCK")
 }
 
 func callBedrockForJSON(ctx context.Context, modelID string, text string, formatInstructions string, imagePaths []string) ([]WordItem, error) {

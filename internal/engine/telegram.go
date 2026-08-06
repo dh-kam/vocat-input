@@ -13,23 +13,7 @@ import (
 )
 
 func GetTelegramCredentials() (string, string) {
-	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
-	chatID := os.Getenv("TELEGRAM_CHAT_ID")
-
-	if botToken == "" || chatID == "" {
-		if envData, err := os.ReadFile(".env"); err == nil {
-			for _, line := range strings.Split(string(envData), "\n") {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "TELEGRAM_BOT_TOKEN=") {
-					botToken = strings.TrimSpace(strings.Split(line, "=")[1])
-				}
-				if strings.HasPrefix(line, "TELEGRAM_CHAT_ID=") {
-					chatID = strings.TrimSpace(strings.Split(line, "=")[1])
-				}
-			}
-		}
-	}
-	return botToken, chatID
+	return LookupConfig("TELEGRAM_BOT_TOKEN"), LookupConfig("TELEGRAM_CHAT_ID")
 }
 
 func SendDocToTelegram(docPath, customFileName, caption string) error {

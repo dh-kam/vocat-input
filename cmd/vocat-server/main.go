@@ -134,17 +134,7 @@ func main() {
 }
 
 func getSessionSecret() string {
-	secret := os.Getenv("VOCAT_SESSION_SECRET")
-	if secret == "" {
-		if envData, err := os.ReadFile(".env"); err == nil {
-			for _, line := range strings.Split(string(envData), "\n") {
-				if strings.HasPrefix(line, "VOCAT_SESSION_SECRET=") {
-					secret = strings.TrimSpace(strings.Split(line, "=")[1])
-					break
-				}
-			}
-		}
-	}
+	secret := engine.LookupConfig("VOCAT_SESSION_SECRET")
 	if secret == "" {
 		secret = "vocat_secure_session_secret_2026"
 	}

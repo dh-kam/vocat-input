@@ -190,24 +190,8 @@ func (f *FallbackChainOCRProvider) ProcessImage(ctx context.Context, imagePath s
 // getGoogleOCRAuth resolves API key or OAuth token for Google Gemini/Vertex OCR providers.
 func getGoogleOCRAuth(ctx context.Context) (token, projectID, location string, isAPIKey bool) {
 	// 1. Check API Key environment variables or .env file
-	keys := []string{"VERTEX_API_KEY", "VERTEX_AI_API_KEY", "GEMINI_API_KEY", "GOOGLE_AI_STUDIO_API_KEY"}
-	for _, k := range keys {
-		if v := os.Getenv(k); v != "" {
-			return v, "c0de1ab-dev-494714", "us-central1", true
-		}
-	}
-
-	if envData, err := os.ReadFile(".env"); err == nil {
-		for _, line := range strings.Split(string(envData), "\n") {
-			for _, k := range keys {
-				if strings.HasPrefix(line, k+"=") {
-					v := strings.TrimSpace(strings.Split(line, "=")[1])
-					if v != "" {
-						return v, "c0de1ab-dev-494714", "us-central1", true
-					}
-				}
-			}
-		}
+	if v := LookupConfig("VERTEX_API_KEY", "VERTEX_AI_API_KEY", "GEMINI_API_KEY", "GOOGLE_AI_STUDIO_API_KEY"); v != "" {
+		return v, "c0de1ab-dev-494714", "us-central1", true
 	}
 
 	// 2. OAuth token fallback (gcloud auth print-access-token)
@@ -388,18 +372,7 @@ type BedrockOCRProvider struct{}
 func (b *BedrockOCRProvider) Name() string { return "bedrock" }
 
 func (b *BedrockOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
-	bearerToken := os.Getenv("AWS_BEARER_TOKEN_BEDROCK")
-	if bearerToken == "" {
-		if envData, err := os.ReadFile(".env"); err == nil {
-			for _, line := range strings.Split(string(envData), "\n") {
-				if strings.HasPrefix(line, "AWS_BEARER_TOKEN_BEDROCK=") {
-					bearerToken = strings.TrimSpace(strings.Split(line, "=")[1])
-					break
-				}
-			}
-		}
-	}
-
+	bearerToken := LookupConfig("AWS_BEARER_TOKEN_BEDROCK")
 	if bearerToken == "" {
 		return "", fmt.Errorf("AWS_BEARER_TOKEN_BEDROCK not set in environment or .env")
 	}
