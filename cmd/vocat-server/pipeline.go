@@ -123,7 +123,7 @@ func structureRun(r *engine.ConversionRun, ctx context.Context, mergedText strin
 	store.Save(r)
 
 	r.SetProgress(85)
-	r.AddLog("🤖 Stage 2: Extracting vocabulary and material title with format-aware AI prompt... (85%%)")
+	r.AddLog("🤖 Stage 2: Extracting vocabulary and material title with format-aware AI prompt... (85%)")
 	result, err := engine.ConvertOCRToVocatJSON(ctx, mergedText, r.PreserveOrder, imagePaths, r.OCRProvider, r.OCRModel)
 	if err != nil {
 		return nil, err
