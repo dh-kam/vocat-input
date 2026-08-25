@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Upload, Sparkles, Check, Trash2, Zap } from 'lucide-react';
+import { X, Upload, Sparkles, Check, Trash2, Zap, Cpu, RefreshCw, ChevronDown, Layers, Edit3 } from 'lucide-react';
 
 const FALLBACK_PROVIDERS = [
   {
@@ -9,12 +9,10 @@ const FALLBACK_PROVIDERS = [
     desc: 'Google AI Studio Gemini API (Direct Key)',
     defaultModel: 'gemini-2.5-flash',
     models: [
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal (Recommended)', default: true },
-      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & High Accuracy' },
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal & Balanced (Recommended)', default: true },
+      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & Highest Accuracy' },
       { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Ultra-fast Lightweight' },
       { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'High Throughput Multimodal' },
-      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Legacy Pro Model' },
-      { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Lightweight & Fast' },
     ],
   },
   {
@@ -23,11 +21,10 @@ const FALLBACK_PROVIDERS = [
     desc: 'Google Cloud Vertex AI (Gemini 2.5)',
     defaultModel: 'gemini-2.5-flash',
     models: [
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Balanced (Recommended)', default: true },
-      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Best Accuracy & Deep Reasoning' },
-      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'High Throughput' },
-      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Legacy Pro Model' },
-      { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Lightweight & Fast' },
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal & High Accuracy (Recommended)', default: true },
+      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & Highest OCR Accuracy' },
+      { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Ultra-fast Lightweight' },
+      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'High Throughput Multimodal' },
     ],
   },
   {
@@ -49,38 +46,52 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [providers, setProviders] = useState(FALLBACK_PROVIDERS);
-  const [ocrProvider, setOcrProvider] = useState('vertex');
+  const [ocrProvider, setOcrProvider] = useState('google-ai-studio');
   const [ocrModel, setOcrModel] = useState('gemini-2.5-flash');
+  const [customModelMode, setCustomModelMode] = useState(false);
+  const [customModelInput, setCustomModelInput] = useState('');
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [preserveOrder, setPreserveOrder] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    fetch('/api/models', { credentials: 'include' })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
+  const fetchModels = async (forceRefresh = false) => {
+    setIsLoadingModels(true);
+    try {
+      const url = `/api/models${forceRefresh ? '?refresh=true' : ''}`;
+      const res = await fetch(url, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
         if (data && Array.isArray(data.providers) && data.providers.length > 0) {
           setProviders(data.providers);
           const currentP = data.providers.find(p => p.id === ocrProvider) || data.providers[0];
           if (currentP) {
             const hasModel = currentP.models?.some(m => m.id === ocrModel);
-            if (!hasModel) {
+            if (!hasModel && !customModelMode) {
               setOcrModel(currentP.defaultModel || currentP.models?.[0]?.id || 'gemini-2.5-flash');
             }
           }
         }
-      })
-      .catch(() => {
-        // use fallback providers
-      });
+      }
+    } catch (err) {
+      console.warn('Could not fetch dynamic models, using local catalog:', err);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchModels(false);
   }, [isOpen]);
 
   const currentProviderObj = providers.find(p => p.id === ocrProvider) || providers[0];
   const availableModels = currentProviderObj?.models || [];
+  const currentModelObj = availableModels.find(m => m.id === ocrModel);
 
   const handleProviderChange = (providerId) => {
     setOcrProvider(providerId);
+    setCustomModelMode(false);
     const targetProvider = providers.find(p => p.id === providerId);
     if (targetProvider) {
       setOcrModel(targetProvider.defaultModel || targetProvider.models?.[0]?.id || '');
@@ -127,10 +138,12 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }) {
     if (selectedFiles.length === 0) return;
     setIsSubmitting(true);
 
+    const effectiveModel = customModelMode && customModelInput.trim() ? customModelInput.trim() : ocrModel;
+
     const formData = new FormData();
     selectedFiles.forEach(item => formData.append('images', item.file));
     formData.append('ocrProvider', ocrProvider);
-    formData.append('ocrModel', ocrModel);
+    formData.append('ocrModel', effectiveModel);
     formData.append('preserveOrder', preserveOrder ? 'true' : 'false');
 
     await onSubmit(formData);
@@ -241,67 +254,143 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }) {
                   </div>
                 )}
 
-                {/* Provider Picker */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-extrabold uppercase text-slate-500 mb-2 tracking-wider">OCR Engine Provider</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {providers.map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => handleProviderChange(p.id)}
-                          className={`p-3 sm:p-3.5 rounded-xl border text-left text-xs font-black transition-all cursor-pointer ${
-                            ocrProvider === p.id 
-                              ? 'border-sky-500 bg-sky-50 text-sky-800 ring-2 ring-sky-500/20 shadow-sm' 
-                              : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
-                          }`}
-                        >
-                          <div>{p.label}</div>
-                          {p.desc && <div className="text-[10px] font-normal text-slate-500 mt-0.5 truncate">{p.desc}</div>}
-                        </button>
-                      ))}
+                {/* AI Provider & Dynamic Model Dual Combobox Selection */}
+                <div className="rounded-2xl p-4 sm:p-5 border border-slate-200 bg-slate-50/60 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-700">
+                        <Cpu className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">AI Engine & Model Selection</h4>
+                        <p className="text-[10px] text-slate-500 font-medium">Select Cloud Provider & Dynamically Loaded OCR Model</p>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Model Selector */}
-                  <div>
-                    <label className="block text-xs font-extrabold uppercase text-slate-500 mb-2 tracking-wider">OCR Model</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {availableModels.map(m => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => setOcrModel(m.id)}
-                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                            ocrModel === m.id
-                              ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-500/20'
-                              : 'border-slate-300 bg-white hover:border-slate-400'
-                          }`}
-                        >
-                          <div className="text-xs font-black text-slate-900">{m.label}</div>
-                          <div className="text-[10px] font-medium text-slate-500 mt-0.5">{m.desc}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Preserve Order */}
-                  <div>
-                    <label className="block text-xs font-extrabold uppercase text-slate-500 mb-2 tracking-wider">Sequence Order</label>
                     <button
                       type="button"
-                      onClick={() => setPreserveOrder(!preserveOrder)}
-                      className={`w-full p-3 sm:p-3.5 rounded-xl border flex items-center justify-between text-xs font-black transition-all cursor-pointer ${
-                        preserveOrder ? 'border-sky-500 bg-sky-50 text-sky-800 ring-2 ring-sky-500/20' : 'border-slate-300 bg-white text-slate-600'
-                      }`}
+                      onClick={() => fetchModels(true)}
+                      disabled={isLoadingModels}
+                      className="text-[11px] font-bold text-sky-700 hover:text-sky-800 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                      title="Fetch live model list from cloud"
                     >
-                      <span>Preserve Original Order</span>
-                      <div className={`w-4.5 h-4.5 rounded flex items-center justify-center border ${preserveOrder ? 'bg-sky-600 border-sky-600 text-white' : 'border-slate-400'}`}>
-                        {preserveOrder && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </div>
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingModels ? 'animate-spin text-sky-600' : ''}`} />
+                      <span>{isLoadingModels ? 'Refreshing...' : 'Live Fetch'}</span>
                     </button>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                    {/* Left: Provider Combobox */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold uppercase text-slate-600 mb-1.5 tracking-wider flex items-center justify-between">
+                        <span>Provider</span>
+                        <span className="text-[10px] text-sky-600 font-bold">{providers.length} engines</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={ocrProvider}
+                          onChange={(e) => handleProviderChange(e.target.value)}
+                          className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-sky-500 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-xs appearance-none cursor-pointer pr-9 transition-colors"
+                        >
+                          {providers.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.label} {p.id === 'google-ai-studio' ? '⚡' : p.id === 'bedrock' ? '🟧' : '☁️'}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                      {currentProviderObj?.desc && (
+                        <p className="text-[10px] text-slate-500 font-medium mt-1 truncate pl-1">
+                          {currentProviderObj.desc}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Right: Model Combobox */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold uppercase text-slate-600 mb-1.5 tracking-wider flex items-center justify-between">
+                        <span>Model</span>
+                        <span className="text-[10px] text-emerald-600 font-bold">{availableModels.length} models</span>
+                      </label>
+
+                      {!customModelMode ? (
+                        <div className="relative">
+                          <select
+                            value={ocrModel}
+                            onChange={(e) => {
+                              if (e.target.value === '__custom__') {
+                                setCustomModelMode(true);
+                                setCustomModelInput(ocrModel);
+                              } else {
+                                setOcrModel(e.target.value);
+                              }
+                            }}
+                            className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-sky-500 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-xs appearance-none cursor-pointer pr-9 transition-colors"
+                          >
+                            {availableModels.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.label} {m.default ? '★' : ''} ({m.id})
+                              </option>
+                            ))}
+                            <option value="__custom__">✍️ Custom Model ID...</option>
+                          </select>
+                          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={customModelInput}
+                            onChange={(e) => setCustomModelInput(e.target.value)}
+                            placeholder="Enter model ID (e.g. gemini-2.5-pro)"
+                            className="flex-1 bg-white border border-sky-400 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-xs"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomModelMode(false);
+                              if (customModelInput.trim()) {
+                                setOcrModel(customModelInput.trim());
+                              }
+                            }}
+                            className="px-2.5 py-2 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-800 text-xs font-bold shrink-0 cursor-pointer"
+                          >
+                            Set
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCustomModelMode(false)}
+                            className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold shrink-0 cursor-pointer"
+                          >
+                            List
+                          </button>
+                        </div>
+                      )}
+
+                      {currentModelObj?.desc && !customModelMode && (
+                        <p className="text-[10px] text-slate-500 font-medium mt-1 truncate pl-1" title={currentModelObj.desc}>
+                          {currentModelObj.desc}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preserve Order */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setPreserveOrder(!preserveOrder)}
+                    className={`w-full p-3 sm:p-3.5 rounded-xl border flex items-center justify-between text-xs font-black transition-all cursor-pointer ${
+                      preserveOrder ? 'border-sky-500 bg-sky-50 text-sky-800 ring-2 ring-sky-500/20' : 'border-slate-300 bg-white text-slate-600'
+                    }`}
+                  >
+                    <span>Preserve Original Sequence Order</span>
+                    <div className={`w-4.5 h-4.5 rounded flex items-center justify-center border ${preserveOrder ? 'bg-sky-600 border-sky-600 text-white' : 'border-slate-400'}`}>
+                      {preserveOrder && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    </div>
+                  </button>
                 </div>
               </div>
 

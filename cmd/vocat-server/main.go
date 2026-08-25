@@ -1151,48 +1151,8 @@ type ProviderOption struct {
 }
 
 func handleGetModels(c *gin.Context) {
-	providers := []ProviderOption{
-		{
-			ID:           "google-ai-studio",
-			Label:        "Google AI Studio",
-			Desc:         "Google AI Studio Gemini API (Direct Key)",
-			DefaultModel: "gemini-2.5-flash",
-			Models: []ModelOption{
-				{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Desc: "Fast, Multimodal (Recommended)", Default: true},
-				{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Desc: "Deep Reasoning & High Accuracy"},
-				{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Desc: "Ultra-fast Lightweight"},
-				{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput Multimodal"},
-				{ID: "gemini-1.5-pro", Label: "Gemini 1.5 Pro", Desc: "Legacy Pro Model"},
-				{ID: "gemini-1.5-flash", Label: "Gemini 1.5 Flash", Desc: "Lightweight & Fast"},
-			},
-		},
-		{
-			ID:           "vertex",
-			Label:        "GCP Vertex",
-			Desc:         "Google Cloud Vertex AI (Gemini 2.5)",
-			DefaultModel: "gemini-2.5-flash",
-			Models: []ModelOption{
-				{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Desc: "Fast, Balanced (Recommended)", Default: true},
-				{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Desc: "Best Accuracy & Deep Reasoning"},
-				{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput"},
-				{ID: "gemini-1.5-pro", Label: "Gemini 1.5 Pro", Desc: "Legacy Pro Model"},
-				{ID: "gemini-1.5-flash", Label: "Gemini 1.5 Flash", Desc: "Lightweight & Fast"},
-			},
-		},
-		{
-			ID:           "bedrock",
-			Label:        "AWS Bedrock",
-			Desc:         "Amazon Bedrock (Claude 4.6 & Nova)",
-			DefaultModel: "us.anthropic.claude-sonnet-4-6",
-			Models: []ModelOption{
-				{ID: "us.anthropic.claude-sonnet-4-6", Label: "Claude 4.6 Sonnet", Desc: "State-of-the-art AI (Recommended)", Default: true},
-				{ID: "us.anthropic.claude-3-7-sonnet-20250219-v1:0", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
-				{ID: "us.anthropic.claude-3-5-sonnet-20241022-v2:0", Label: "Claude 3.5 Sonnet v2", Desc: "High Performance Multimodal"},
-				{ID: "amazon.nova-pro-v1:0", Label: "Nova Pro", Desc: "Higher Accuracy Reasoning"},
-				{ID: "amazon.nova-lite-v1:0", Label: "Nova Lite", Desc: "Fast, Cost-Effective"},
-			},
-		},
-	}
+	forceRefresh := strings.ToLower(c.Query("refresh")) == "true"
+	providers := getDynamicModels(c.Request.Context(), forceRefresh)
 
 	c.JSON(http.StatusOK, gin.H{
 		"providers": providers,
