@@ -147,6 +147,7 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 	isClaudeModel := strings.Contains(modelLower, "claude") ||
 		strings.Contains(modelLower, "opus") ||
 		strings.Contains(modelLower, "sonnet") ||
+		strings.Contains(modelLower, "fable") ||
 		strings.Contains(modelLower, "haiku")
 
 	// If a Claude/Opus/Sonnet model was requested (under any provider), route to Bedrock/Anthropic
@@ -810,16 +811,28 @@ func getBedrockBearerToken() string {
 func resolveClaudeBedrockModelID(model string) string {
 	m := strings.ToLower(strings.TrimSpace(model))
 	switch {
-	case strings.Contains(m, "opus"):
+	case strings.Contains(m, "fable"):
+		return "us.anthropic.claude-4-5-fable-v1:0"
+	case strings.Contains(m, "4-6-opus") || strings.Contains(m, "4.6-opus") || strings.Contains(m, "opus-4-6") || strings.Contains(m, "opus-4.6"):
+		return "us.anthropic.claude-opus-4-6"
+	case strings.Contains(m, "4-5-opus") || strings.Contains(m, "4.5-opus") || strings.Contains(m, "opus-4-5") || strings.Contains(m, "opus-4.5"):
+		return "us.anthropic.claude-opus-4-5"
+	case strings.Contains(m, "3-opus") || strings.Contains(m, "3.0-opus") || strings.Contains(m, "opus-3"):
 		return "us.anthropic.claude-3-opus-20240229-v1:0"
-	case strings.Contains(m, "3-7") || strings.Contains(m, "3.7"):
+	case strings.Contains(m, "opus"):
+		return "us.anthropic.claude-opus-4-6"
+	case strings.Contains(m, "4-6") || strings.Contains(m, "4.6") || strings.Contains(m, "sonnet-4-6") || strings.Contains(m, "sonnet-4.6"):
+		return "us.anthropic.claude-sonnet-4-6"
+	case strings.Contains(m, "4-5") || strings.Contains(m, "4.5") || strings.Contains(m, "sonnet-4-5") || strings.Contains(m, "sonnet-4.5"):
+		return "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+	case strings.Contains(m, "3-7") || strings.Contains(m, "3.7") || strings.Contains(m, "sonnet-3-7") || strings.Contains(m, "sonnet-3.7"):
 		return "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
-	case strings.Contains(m, "3-5-sonnet") || strings.Contains(m, "3.5-sonnet") || (strings.Contains(m, "sonnet") && !strings.Contains(m, "4-6") && !strings.Contains(m, "4.6")):
+	case strings.Contains(m, "3-5-sonnet") || strings.Contains(m, "3.5-sonnet"):
 		return "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+	case strings.Contains(m, "sonnet"):
+		return "us.anthropic.claude-sonnet-4-6"
 	case strings.Contains(m, "haiku"):
 		return "us.anthropic.claude-3-5-haiku-20241022-v1:0"
-	case strings.Contains(m, "4-6") || strings.Contains(m, "4.6"):
-		return "us.anthropic.claude-sonnet-4-6"
 	case strings.HasPrefix(m, "us.anthropic.") || strings.HasPrefix(m, "anthropic.") || strings.HasPrefix(m, "amazon."):
 		return model
 	default:
