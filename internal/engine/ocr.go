@@ -502,6 +502,17 @@ CRITICAL RULES FOR TRANSCRIPTION:
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("[Google AI Studio OCR Warning] API error (status %d): %s. Attempting Vertex AI fallback...\n", resp.StatusCode, string(body))
+		vertexProv := &VertexAIOCRProvider{}
+		if vText, vErr := vertexProv.ProcessImage(ctx, imagePath); vErr == nil && vText != "" {
+			fmt.Printf("[Google AI Studio OCR Fallback Success] Successfully processed image with Vertex AI fallback\n")
+			return vText, nil
+		}
+		bedrockProv := &BedrockOCRProvider{}
+		if bText, bErr := bedrockProv.ProcessImage(ctx, imagePath); bErr == nil && bText != "" {
+			fmt.Printf("[Google AI Studio OCR Fallback Success] Successfully processed image with Bedrock fallback\n")
+			return bText, nil
+		}
 		return "", fmt.Errorf("Google AI Studio API error (status %d): %s", resp.StatusCode, string(body))
 	}
 

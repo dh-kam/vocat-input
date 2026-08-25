@@ -105,10 +105,28 @@ func runOCRPhase(r *engine.ConversionRun, provider engine.OCRProvider, ctx conte
 
 		text, err := provider.ProcessImage(ctx, imgPath)
 		if err != nil {
-			r.SetOCRResultStatus(i, "FAILED")
-			r.SetOCRResultError(i, err.Error())
-			failRun(r, fmt.Errorf("OCR Failed on '%s' [%d/%d]: %w", r.OCRResults[i].ImageName, i+1, total, err))
-			return err
+			fmt.Printf("[Pipeline OCR Warning] Primary OCR provider '%s' failed (%v). Attempting fallback...\n", provider.Name(), err)
+			var fallbackText string
+			var fallbackErr error
+			if provider.Name() != "vertex" {
+				vProv := &engine.VertexAIOCRProvider{}
+				fallbackText, fallbackErr = vProv.ProcessImage(ctx, imgPath)
+			}
+			if fallbackErr != nil || fallbackText == "" {
+				if provider.Name() != "bedrock" {
+					bProv := &engine.BedrockOCRProvider{}
+					fallbackText, fallbackErr = bProv.ProcessImage(ctx, imgPath)
+				}
+			}
+			if fallbackErr == nil && fallbackText != "" {
+				text = fallbackText
+				r.AddLog(fmt.Sprintf("⚠️ [%d/%d] Primary provider '%s' encountered an issue, successfully recovered using fallback provider", i+1, total, provider.Name()))
+			} else {
+				r.SetOCRResultStatus(i, "FAILED")
+				r.SetOCRResultError(i, err.Error())
+				failRun(r, fmt.Errorf("OCR Failed on '%s' [%d/%d]: %w", r.OCRResults[i].ImageName, i+1, total, err))
+				return err
+			}
 		}
 
 		if r.IsDeleted() {
