@@ -3,6 +3,8 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -10,17 +12,43 @@ import (
 	"time"
 )
 
+type FlexibleBBox []int
+
+func (b *FlexibleBBox) UnmarshalJSON(data []byte) error {
+	var ints []int
+	if err := json.Unmarshal(data, &ints); err == nil {
+		*b = ints
+		return nil
+	}
+	var floats []float64
+	if err := json.Unmarshal(data, &floats); err == nil {
+		res := make([]int, len(floats))
+		for i, f := range floats {
+			res[i] = int(math.Round(f))
+		}
+		*b = res
+		return nil
+	}
+	*b = nil
+	return fmt.Errorf("cannot unmarshal %s into FlexibleBBox", string(data))
+}
+
 type WordItem struct {
-	No          int         `json:"no"`
-	Word        string      `json:"word"`
-	Pos         string      `json:"pos"`
-	Meaning     interface{} `json:"meaning"`               // string or []string
-	Created     string      `json:"created,omitempty"`     // Timestamp string for sequential ordering
-	BBox        []int       `json:"bbox,omitempty"`        // [ymin, xmin, ymax, xmax]
-	ImageWidth  int         `json:"imageWidth,omitempty"`  // Reference image width used by AI
-	ImageHeight int         `json:"imageHeight,omitempty"` // Reference image height used by AI
-	ImageIndex  int         `json:"imageIndex,omitempty"`  // 1-indexed
-	ImageName   string      `json:"imageName,omitempty"`   // Image filename
+	No          int          `json:"no"`
+	Word        string       `json:"word"`
+	Pos         string       `json:"pos"`
+	Meaning     interface{}  `json:"meaning"`               // string or []string
+	Created     string       `json:"created,omitempty"`     // Timestamp string for sequential ordering
+	BBox        FlexibleBBox `json:"bbox,omitempty"`        // [ymin, xmin, ymax, xmax]
+	ImageWidth  int          `json:"imageWidth,omitempty"`  // Reference image width used by AI
+	ImageHeight int          `json:"imageHeight,omitempty"` // Reference image height used by AI
+	ImageIndex  int          `json:"imageIndex,omitempty"`  // 1-indexed
+	ImageName   string       `json:"imageName,omitempty"`   // Image filename
+}
+
+type StructuringResult struct {
+	Title string     `json:"title,omitempty"`
+	Words []WordItem `json:"words"`
 }
 
 type OCRResult struct {
@@ -51,6 +79,7 @@ const (
 
 type ConversionRun struct {
 	mu            sync.Mutex   `json:"-"`
+	deleted       bool         `json:"-"`
 	ID            string       `json:"id"`
 	Title         string       `json:"title"`
 	CreatedAt     time.Time    `json:"createdAt"`
@@ -91,6 +120,20 @@ func (r *ConversionRun) MarshalJSON() ([]byte, error) {
 	return json.Marshal((*plain)(r))
 }
 
+// MarkDeleted marks the run as deleted to prevent zombie saves by background workers.
+func (r *ConversionRun) MarkDeleted() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.deleted = true
+}
+
+// IsDeleted checks if the run was marked deleted.
+func (r *ConversionRun) IsDeleted() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.deleted
+}
+
 // TryClaim moves the run into an in-flight status, but only if no pipeline already holds it, and
 // reports whether the caller won the claim.
 //
@@ -102,7 +145,7 @@ func (r *ConversionRun) TryClaim(status RunStatus) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.Status == RunStatusOCRProgress || r.Status == RunStatusMerging {
+	if r.deleted || r.Status == RunStatusOCRProgress || r.Status == RunStatusMerging {
 		return false
 	}
 	r.Status = status
@@ -220,27 +263,49 @@ func NewRunStore(storageDir string) *RunStore {
 	return store
 }
 
+// Touch updates UpdatedAt while holding the run's mutex.
+func (r *ConversionRun) Touch() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.UpdatedAt = time.Now()
+}
+
 func (s *RunStore) loadFromDisk() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	data, err := os.ReadFile(s.dbFile)
-	if err != nil || len(data) == 0 {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		log.Printf("[RunStore ERROR] Failed to read %s: %v", s.dbFile, err)
+		return
+	}
+	if len(data) == 0 {
 		return
 	}
 
 	var list []*ConversionRun
-	if err := json.Unmarshal(data, &list); err == nil {
-		for _, run := range list {
-			s.runs[run.ID] = run
-		}
+	if err := json.Unmarshal(data, &list); err != nil {
+		// Atomic isolate corrupted file to prevent infinite backup churn on subsequent restarts
+		bakFile := fmt.Sprintf("%s.corrupted.%s", s.dbFile, time.Now().Format("20060102150405"))
+		_ = os.Rename(s.dbFile, bakFile)
+		log.Printf("[RunStore FATAL] Corrupted %s detected! Isolated to %s. Error: %v", s.dbFile, bakFile, err)
+		return
+	}
+
+	for _, run := range list {
+		s.runs[run.ID] = run
 	}
 }
 
 func (s *RunStore) saveToDiskLocked() {
 	var list []*ConversionRun
 	for _, r := range s.runs {
-		list = append(list, r)
+		if !r.IsDeleted() {
+			list = append(list, r)
+		}
 	}
 	// Sort by CreatedAt desc
 	sort.Slice(list, func(i, j int) bool {
@@ -248,15 +313,53 @@ func (s *RunStore) saveToDiskLocked() {
 	})
 
 	bytesData, err := json.MarshalIndent(list, "", "  ")
-	if err == nil {
-		_ = os.WriteFile(s.dbFile, bytesData, 0644)
+	if err != nil {
+		log.Printf("[RunStore ERROR] Failed to marshal runs: %v", err)
+		return
+	}
+
+	// Atomic write: write to temp file then rename with sync
+	tmpFile := fmt.Sprintf("%s.tmp.%d", s.dbFile, time.Now().UnixNano())
+	f, err := os.OpenFile(tmpFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Printf("[RunStore ERROR] Failed to create tmp db file: %v", err)
+		return
+	}
+
+	if _, err := f.Write(bytesData); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmpFile)
+		log.Printf("[RunStore ERROR] Failed to write tmp db file: %v", err)
+		return
+	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmpFile)
+		log.Printf("[RunStore ERROR] Failed to sync tmp db file: %v", err)
+		return
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmpFile)
+		log.Printf("[RunStore ERROR] Failed to close tmp db file: %v", err)
+		return
+	}
+
+	if err := os.Rename(tmpFile, s.dbFile); err != nil {
+		_ = os.Remove(tmpFile)
+		log.Printf("[RunStore ERROR] Failed to rename tmp db file to %s: %v", s.dbFile, err)
 	}
 }
 
 func (s *RunStore) Save(run *ConversionRun) {
+	if run == nil || run.IsDeleted() {
+		return
+	}
+	run.Touch()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	run.UpdatedAt = time.Now()
+	if run.IsDeleted() {
+		return
+	}
 	s.runs[run.ID] = run
 	s.saveToDiskLocked()
 }
@@ -273,7 +376,9 @@ func (s *RunStore) List() []*ConversionRun {
 	defer s.mu.RUnlock()
 	var list []*ConversionRun
 	for _, r := range s.runs {
-		list = append(list, r)
+		if !r.IsDeleted() {
+			list = append(list, r)
+		}
 	}
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].CreatedAt.After(list[j].CreatedAt)
@@ -284,6 +389,9 @@ func (s *RunStore) List() []*ConversionRun {
 func (s *RunStore) Delete(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if r, ok := s.runs[id]; ok {
+		r.MarkDeleted()
+	}
 	delete(s.runs, id)
 	s.saveToDiskLocked()
 }

@@ -24,20 +24,6 @@ func resolveRunProvider(r *engine.ConversionRun) (engine.OCRProvider, error) {
 	return registry.Get(r.OCRProvider)
 }
 
-// applyModelEnv exports the run's model selection into the env vars the providers read. Setting a
-// process-wide env var from a per-request field is coarse, but it is how the providers are wired
-// today and the server is single-user.
-func applyModelEnv(r *engine.ConversionRun) {
-	if r.OCRModel == "" {
-		return
-	}
-	if r.OCRProvider == "bedrock" {
-		os.Setenv("BEDROCK_MODEL", r.OCRModel)
-	} else {
-		os.Setenv("VERTEX_MODEL", r.OCRModel)
-	}
-}
-
 // failRun marks a run FAILED, records the error in its state and log, and persists it. Every
 // terminal failure in the pipeline goes through here so the shape cannot drift between handlers.
 func failRun(r *engine.ConversionRun, err error) {
@@ -64,11 +50,13 @@ func ocrSnippetLog(index int, text string) string {
 func runOCRPhase(r *engine.ConversionRun, provider engine.OCRProvider, ctx context.Context) error {
 	total := len(r.Images)
 	for i, imgPath := range r.Images {
+		if r.IsDeleted() {
+			return fmt.Errorf("run deleted")
+		}
 		currentProg := 5 + int((float64(i)/float64(total))*65.0)
 		r.SetOCRResultStatus(i, "PROCESSING")
 		r.SetProgress(currentProg)
 		r.AddLog(fmt.Sprintf("📷 [%d/%d] OCR Vision Processing '%s' (model: %s)... (%d%%)", i+1, total, r.OCRResults[i].ImageName, r.OCRModel, currentProg))
-		store.Save(r)
 
 		text, err := provider.ProcessImage(ctx, imgPath)
 		if err != nil {
@@ -78,14 +66,18 @@ func runOCRPhase(r *engine.ConversionRun, provider engine.OCRProvider, ctx conte
 			return err
 		}
 
+		if r.IsDeleted() {
+			return fmt.Errorf("run deleted")
+		}
+
 		doneProg := 5 + int((float64(i+1)/float64(total))*65.0)
 		r.SetOCRResultStatus(i, "COMPLETED")
 		r.SetOCRResultText(i, text)
 		r.SetProgress(doneProg)
 		r.AddLog(fmt.Sprintf("✅ [%d/%d] OCR Completed on '%s' (%d%%)", i+1, total, r.OCRResults[i].ImageName, doneProg))
 		r.AddLog(ocrSnippetLog(i+1, text))
-		store.Save(r)
 	}
+	store.Save(r)
 	return nil
 }
 
@@ -123,28 +115,59 @@ func buildImagePaths(r *engine.ConversionRun, uploadDir string) []string {
 // words on the run, advancing progress 80% -> 95%. It returns the words so the caller can export
 // them.
 func structureRun(r *engine.ConversionRun, ctx context.Context, mergedText string, imagePaths []string) ([]engine.WordItem, error) {
+	if r.IsDeleted() {
+		return nil, fmt.Errorf("run deleted")
+	}
 	r.SetProgress(80)
 	r.AddLog(fmt.Sprintf("🔍 Stage 1: Analyzing image format with AI Vision (%d images)... (80%%)", len(imagePaths)))
 	store.Save(r)
 
 	r.SetProgress(85)
-	r.AddLog("🤖 Stage 2: Extracting vocabulary with format-aware AI prompt... (85%%)")
-	words, err := engine.ConvertOCRToVocatJSON(ctx, mergedText, r.PreserveOrder, imagePaths, r.OCRProvider, r.OCRModel)
+	r.AddLog("🤖 Stage 2: Extracting vocabulary and material title with format-aware AI prompt... (85%%)")
+	result, err := engine.ConvertOCRToVocatJSON(ctx, mergedText, r.PreserveOrder, imagePaths, r.OCRProvider, r.OCRModel)
 	if err != nil {
 		return nil, err
 	}
-	r.SetWords(words)
+	if r.IsDeleted() {
+		return nil, fmt.Errorf("run deleted")
+	}
+
+	if result.Title != "" {
+		r.SetTitle(result.Title)
+		r.AddLog(fmt.Sprintf("🏷️ Extracted Material Title: '%s'", result.Title))
+	}
+
+	r.SetWords(result.Words)
 	r.SetProgress(95)
-	r.AddLog(fmt.Sprintf("✨ AI Structuring Completed! %d Structured Words Extracted (95%%)", len(words)))
-	return words, nil
+	r.AddLog(fmt.Sprintf("✨ AI Structuring Completed! %d Structured Words Extracted (95%%)", len(result.Words)))
+	return result.Words, nil
 }
 
 // writeRunOutputs serializes the words to JSON and DOC and records the output paths on the run.
-func writeRunOutputs(r *engine.ConversionRun, outputDir string, words []engine.WordItem) {
+func writeRunOutputs(r *engine.ConversionRun, outputDir string, words []engine.WordItem) error {
+	if r.IsDeleted() {
+		return fmt.Errorf("run deleted")
+	}
 	jsonFileName := fmt.Sprintf("%s.json", r.ID)
 	docFileName := fmt.Sprintf("%s.doc", r.ID)
-	jsonBytes, _ := json.MarshalIndent(words, "", "  ")
-	_ = os.WriteFile(filepath.Join(outputDir, jsonFileName), jsonBytes, 0o644)
-	_ = engine.GenerateDocFile(words, filepath.Join(outputDir, docFileName))
+
+	jsonBytes, err := json.MarshalIndent(words, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal words to JSON: %w", err)
+	}
+
+	jsonPath := filepath.Join(outputDir, jsonFileName)
+	if err := os.WriteFile(jsonPath, jsonBytes, 0o644); err != nil {
+		return fmt.Errorf("failed to write JSON output %s: %w", jsonPath, err)
+	}
+
+	docPath := filepath.Join(outputDir, docFileName)
+	if err := engine.GenerateDocFile(words, docPath, r.Title); err != nil {
+		// Clean up written JSON on doc export failure to prevent orphan artifacts
+		_ = os.Remove(jsonPath)
+		return fmt.Errorf("failed to generate DOC file %s: %w", docPath, err)
+	}
+
 	r.SetOutputPaths(fmt.Sprintf("/outputs/%s", jsonFileName), fmt.Sprintf("/outputs/%s", docFileName))
+	return nil
 }

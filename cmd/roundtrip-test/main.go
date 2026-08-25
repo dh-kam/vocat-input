@@ -212,13 +212,14 @@ func main() {
 		imgName := filepath.Base(imgPath)
 		fmt.Printf("\n📷 [%d/%d] Processing Image: %s\n", idx+1, len(targetImages), imgName)
 
-		words, err := engine.ConvertOCRToVocatJSON(ctx, "TestRun", true, []string{imgPath}, provider, modelID)
+		result, err := engine.ConvertOCRToVocatJSON(ctx, "TestRun", true, []string{imgPath}, provider, modelID)
 		if err != nil {
 			fmt.Printf("❌ Failed to OCR image %s: %v\n", imgName, err)
 			continue
 		}
+		words := result.Words
 
-		fmt.Printf("   Extracted %d main headwords. Running ROI crop & Direct Vision Round-Trip...\n", len(words))
+		fmt.Printf("   Extracted %d main headwords (Title: %q). Running ROI crop & Direct Vision Round-Trip...\n", len(words), result.Title)
 
 		imagePass := 0
 		for wIdx, w := range words {

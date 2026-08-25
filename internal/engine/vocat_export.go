@@ -170,7 +170,7 @@ func splitMeaningByCommaOutsideParens(s string) []string {
 	return out
 }
 
-func GenerateDocFile(words []WordItem, outputPath string) error {
+func GenerateDocFile(words []WordItem, outputPath string, customTitle ...string) error {
 	if len(words) == 0 {
 		return fmt.Errorf("GenerateDocFile: empty words list")
 	}
@@ -186,6 +186,9 @@ func GenerateDocFile(words []WordItem, outputPath string) error {
 
 	ts := nowZ()
 	name := strings.TrimSuffix(filepath.Base(outputPath), filepath.Ext(outputPath))
+	if len(customTitle) > 0 && strings.TrimSpace(customTitle[0]) != "" {
+		name = strings.TrimSpace(customTitle[0])
+	}
 
 	corpus := make([]map[string]interface{}, 0, len(words))
 	for i, it := range words {

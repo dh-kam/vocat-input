@@ -34,7 +34,7 @@ func words(boxes ...[]int) []WordItem {
 			Word:    []string{"alpha", "bravo", "charlie", "delta", "echo"}[i%5],
 			Pos:     "명",
 			Meaning: "뜻",
-			BBox:    b,
+			BBox:    FlexibleBBox(b),
 		})
 	}
 	return items
@@ -43,7 +43,7 @@ func words(boxes ...[]int) []WordItem {
 func boxesOf(items []WordItem) [][]int {
 	out := make([][]int, 0, len(items))
 	for _, w := range items {
-		out = append(out, w.BBox)
+		out = append(out, []int(w.BBox))
 	}
 	return out
 }
@@ -104,7 +104,7 @@ func TestCleanWordItems_IsIdempotent(t *testing.T) {
 func TestCleanWordItems_DoesNotMutateInput(t *testing.T) {
 	input := words([]int{120, 50, 260, 950})
 	cleanWordItems(input)
-	assert.Equal(t, []int{120, 50, 260, 950}, input[0].BBox, "input box was rewritten in place")
+	assert.Equal(t, FlexibleBBox{120, 50, 260, 950}, input[0].BBox, "input box was rewritten in place")
 }
 
 // A 0-1000 box only 4 units tall rounds to 0% of height. It must not be flattened into a
@@ -117,7 +117,7 @@ func TestNormalizeBBoxes_ThinBoxSurvivesRounding(t *testing.T) {
 
 	assert.Greater(t, items[0].BBox[2], items[0].BBox[0], "thin box lost its height")
 	assert.Greater(t, items[0].BBox[3], items[0].BBox[1], "thin box lost its width")
-	assert.Equal(t, []int{60, 5, 90, 95}, items[1].BBox, "the normal box should be unaffected")
+	assert.Equal(t, FlexibleBBox{60, 5, 90, 95}, items[1].BBox, "the normal box should be unaffected")
 }
 
 // A box at the very bottom edge cannot be widened downwards, so the top edge has to give way
@@ -136,13 +136,13 @@ func TestNormalizeBBoxes_ScaleDetection(t *testing.T) {
 	t.Run("0-1000 divides by ten", func(t *testing.T) {
 		items := words([]int{120, 50, 260, 950})
 		normalizeBBoxes(items)
-		assert.Equal(t, []int{12, 5, 26, 95}, items[0].BBox)
+		assert.Equal(t, FlexibleBBox{12, 5, 26, 95}, items[0].BBox)
 	})
 
 	t.Run("percentages are left alone", func(t *testing.T) {
 		items := words([]int{12, 5, 26, 95})
 		normalizeBBoxes(items)
-		assert.Equal(t, []int{12, 5, 26, 95}, items[0].BBox)
+		assert.Equal(t, FlexibleBBox{12, 5, 26, 95}, items[0].BBox)
 	})
 
 	t.Run("pixels use each axis image dimension", func(t *testing.T) {
@@ -150,7 +150,7 @@ func TestNormalizeBBoxes_ScaleDetection(t *testing.T) {
 		items[0].ImageHeight = 3000
 		items[0].ImageWidth = 1600
 		normalizeBBoxes(items)
-		assert.Equal(t, []int{10, 5, 20, 95}, items[0].BBox)
+		assert.Equal(t, FlexibleBBox{10, 5, 20, 95}, items[0].BBox)
 	})
 
 	t.Run("pixels without a reference frame fall back to the batch maximum", func(t *testing.T) {

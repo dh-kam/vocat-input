@@ -50,7 +50,78 @@ func NormalizePOS(rawPos string) string {
 	return "명"
 }
 
-func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder bool, imagePaths []string, ocrProvider string, ocrModel string) ([]WordItem, error) {
+var genericTitles = map[string]bool{
+	"null": true, "none": true, "untitled": true, "n/a": true, "unknown": true,
+	"vocabulary": true, "words": true, "단어장": true, "단어목록": true, "단어시험": true,
+}
+
+const trimCutset = " \"'“”‘’`:;-"
+
+// CleanTitle trims, removes markdown wrapping, prefixes, and filters generic names.
+func CleanTitle(raw string) string {
+	t := strings.TrimSpace(raw)
+	t = strings.ReplaceAll(t, "**", "")
+	t = strings.ReplaceAll(t, "*", "")
+	t = strings.ReplaceAll(t, "`", "")
+	t = strings.Trim(t, trimCutset)
+
+	prefixes := []string{
+		"Title:", "title:", "TITLE:",
+		"교재명:", "제목:", "단원명:", "교재:",
+		"Textbook:", "Material:",
+	}
+	for _, p := range prefixes {
+		if strings.HasPrefix(t, p) {
+			t = strings.TrimSpace(strings.TrimPrefix(t, p))
+			t = strings.Trim(t, trimCutset)
+		}
+	}
+
+	fields := strings.Fields(t)
+	t = strings.Join(fields, " ")
+
+	if genericTitles[strings.ToLower(t)] || len(t) < 2 {
+		return ""
+	}
+	if len([]rune(t)) > 80 {
+		runes := []rune(t)
+		t = string(runes[:80])
+	}
+	return t
+}
+
+// SanitizeFileName cleans file path separators and illegal characters for OS file naming.
+func SanitizeFileName(name string) string {
+	var b strings.Builder
+	for _, r := range name {
+		switch r {
+		case '/', '\\', ':', '*', '?', '"', '<', '>', '|', '\n', '\r', '\t':
+			b.WriteRune('_')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	res := strings.TrimSpace(b.String())
+	res = strings.Trim(res, ". ")
+	if res == "" {
+		return "Vocat_Material"
+	}
+	return res
+}
+
+func cleanStructuringResult(res *StructuringResult, imagePaths ...[]string) *StructuringResult {
+	if res == nil {
+		return &StructuringResult{Words: []WordItem{}}
+	}
+	res.Title = CleanTitle(res.Title)
+	if len(imagePaths) > 0 && len(imagePaths[0]) > 0 {
+		res.Words = attachImageMetadata(res.Words, imagePaths[0])
+	}
+	res.Words = cleanWordItems(res.Words)
+	return res
+}
+
+func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder bool, imagePaths []string, ocrProvider string, ocrModel string) (*StructuringResult, error) {
 	fmt.Printf("[AI Structuring Engine] Launching with Provider: '%s', Model: '%s'\n", ocrProvider, ocrModel)
 
 	// Stage 1: Multimodal Vision Format Analysis
@@ -70,16 +141,12 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 	}
 
 	// Stage 2: Extract structured JSON using selected Provider & Model.
-	//
-	// Every branch cleans exactly once, here. cleanWordItems used to run a second time
-	// inside parseStructuredJSONResponse, which re-scaled bounding boxes that were already
-	// normalized and destroyed them; see the comment on cleanWordItems.
 	if ocrProvider == "bedrock" {
 		fmt.Printf("[AI Structuring Stage 2] Calling AWS Bedrock Model '%s'...\n", ocrModel)
-		words, err := callBedrockForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
-		if err == nil {
-			if cleaned := cleanWordItems(words); len(cleaned) > 0 {
-				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Bedrock '%s'\n", len(cleaned), ocrModel)
+		res, err := callBedrockForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
+		if err == nil && res != nil {
+			if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
+				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Bedrock '%s' (Title: '%s')\n", len(cleaned.Words), ocrModel, cleaned.Title)
 				return cleaned, nil
 			}
 		}
@@ -89,18 +156,18 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 	// Default / Vertex AI Engine
 	fmt.Printf("[AI Structuring Stage 2] Calling GCP Vertex AI Model '%s'...\n", ocrModel)
 	if strings.Contains(ocrModel, "claude") {
-		words, err := callBedrockForJSON(ctx, "us.anthropic.claude-sonnet-4-6", mergedText, formatInstructions, imagePaths)
-		if err == nil {
-			if cleaned := cleanWordItems(words); len(cleaned) > 0 {
-				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex/Anthropic '%s'\n", len(cleaned), ocrModel)
+		res, err := callBedrockForJSON(ctx, "us.anthropic.claude-sonnet-4-6", mergedText, formatInstructions, imagePaths)
+		if err == nil && res != nil {
+			if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
+				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex/Anthropic '%s' (Title: '%s')\n", len(cleaned.Words), ocrModel, cleaned.Title)
 				return cleaned, nil
 			}
 		}
 	}
-	words, err := callVertexForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
-	if err == nil {
-		if cleaned := cleanWordItems(words); len(cleaned) > 0 {
-			fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex '%s'\n", len(cleaned), ocrModel)
+	res, err := callVertexForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
+	if err == nil && res != nil {
+		if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
+			fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex '%s' (Title: '%s')\n", len(cleaned.Words), ocrModel, cleaned.Title)
 			return cleaned, nil
 		}
 	}
@@ -108,16 +175,24 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 	// 3. Fallback: Anthropic Direct API
 	apiKey := LookupConfig("ANTHROPIC_API_KEY")
 	if apiKey != "" {
-		words, err := callClaudeForJSON(ctx, apiKey, mergedText)
-		if err == nil {
-			if cleaned := cleanWordItems(words); len(cleaned) > 0 {
+		res, err := callClaudeForJSON(ctx, apiKey, mergedText)
+		if err == nil && res != nil {
+			if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
 				return cleaned, nil
 			}
 		}
 	}
 
 	// 4. Regex Fallback Parser
-	return cleanWordItems(parseOCRTextFallback(mergedText, preserveOrder)), nil
+	fallbackWords, fallbackTitle := parseOCRTextFallbackWithTitle(mergedText, preserveOrder)
+	res = cleanStructuringResult(&StructuringResult{
+		Title: fallbackTitle,
+		Words: fallbackWords,
+	}, imagePaths)
+	if len(res.Words) == 0 {
+		return res, fmt.Errorf("no vocabulary words could be extracted from OCR text")
+	}
+	return res, nil
 }
 
 // analyzeFormatWithImage sends up to 2 sample images to Gemini multimodal to understand
@@ -146,6 +221,7 @@ IMAGE ANALYSIS — answer these questions:
 3. How is each piece of information visually distinguished? (by position? markers like "=", "≠", "-"? font size? color? indentation?)
 4. What is the numbering scheme? (sequential? grouped? per-page?)
 5. What content is supplementary and MUST BE EXCLUDED from becoming a headword entry? (e.g., example phrases like 'germ killer', example sentences, derived words, synonyms).
+6. What is the overall textbook title, unit/day name, chapter, or test title printed in the header/top area of the page? (e.g., '절대수능맵 VOCA Inter 3 Vocabulary Test(기본)', 'DAY 01', 'UNIT 10', '워드마스터 수능 2000 Day 12' etc.)
 
 Then write EXTRACTION INSTRUCTIONS — a clear, specific prompt section that tells an AI:
 - Exactly how to identify a single main headword entry in this specific format
@@ -153,6 +229,7 @@ Then write EXTRACTION INSTRUCTIONS — a clear, specific prompt section that tel
 - How to extract the main word, POS, and Korean meaning for each entry
 - STRICT PRESERVATION: Require keeping the EXACT printed Korean definitions from the image without replacing them with similar/synonym words (e.g., preserve "조산사", NEVER replace with "산부인과 의사")
 - How to preserve original numbering
+- How to extract the overall title into the 'title' field combining textbook name, day/unit, and test type if present
 
 OUTPUT FORMAT: Return ONLY the extraction instructions text (no JSON, no code block, no preamble). 
 Write it as if you're adding instructions to a prompt. Be specific to THIS material's format.
@@ -206,14 +283,13 @@ OCR TEXT SAMPLE:
 	req.Header.Set("Content-Type", "application/json")
 	setAuthHeader(req, token, isAPIKey)
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return "", RedactedError("format analysis request failed: %s", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("format analysis error (status %d): %s", resp.StatusCode, string(body))
 	}
@@ -244,7 +320,10 @@ OCR TEXT SAMPLE:
 // isAPIKey=false when using OAuth token (aiplatform endpoint).
 func getVertexCredentials(ctx context.Context) (token, projectID, location string, isAPIKey bool) {
 	// 1. Check for API key first (Gemini API / AI Studio style)
-	token = LookupConfig("VERTEX_AI_API_KEY")
+	token = LookupConfig("GEMINI_API_KEY")
+	if token == "" {
+		token = LookupConfig("VERTEX_AI_API_KEY")
+	}
 	if token == "" {
 		token = LookupConfig("VERTEX_API_KEY")
 	}
@@ -313,6 +392,12 @@ func encodeBase64(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
+type imageMeta struct {
+	width  int
+	height int
+	name   string
+}
+
 func getImageDimensions(imgPath string) (int, int) {
 	file, err := os.Open(imgPath)
 	if err != nil {
@@ -327,7 +412,59 @@ func getImageDimensions(imgPath string) (int, int) {
 	return cfg.Width, cfg.Height
 }
 
-func callVertexForJSON(ctx context.Context, modelName string, text string, formatInstructions string, imagePaths []string) ([]WordItem, error) {
+func collectImageMeta(imagePaths []string) map[int]imageMeta {
+	m := make(map[int]imageMeta)
+	for i, p := range imagePaths {
+		idx := i + 1 // 1-indexed
+		w, h := getImageDimensions(p)
+		m[idx] = imageMeta{
+			width:  w,
+			height: h,
+			name:   filepath.Base(p),
+		}
+	}
+	return m
+}
+
+func attachImageMetadata(words []WordItem, imagePaths []string) []WordItem {
+	if len(imagePaths) == 0 {
+		return words
+	}
+	metaMap := collectImageMeta(imagePaths)
+	defaultMeta := metaMap[1]
+
+	for i := range words {
+		idx := words[i].ImageIndex
+		if meta, ok := metaMap[idx]; ok {
+			if words[i].ImageWidth <= 0 {
+				words[i].ImageWidth = meta.width
+			}
+			if words[i].ImageHeight <= 0 {
+				words[i].ImageHeight = meta.height
+			}
+			if words[i].ImageName == "" {
+				words[i].ImageName = meta.name
+			}
+		} else {
+			// Fallback to first image
+			if words[i].ImageWidth <= 0 {
+				words[i].ImageWidth = defaultMeta.width
+			}
+			if words[i].ImageHeight <= 0 {
+				words[i].ImageHeight = defaultMeta.height
+			}
+			if words[i].ImageName == "" {
+				words[i].ImageName = defaultMeta.name
+			}
+			if words[i].ImageIndex <= 0 {
+				words[i].ImageIndex = 1
+			}
+		}
+	}
+	return words
+}
+
+func callVertexForJSON(ctx context.Context, modelName string, text string, formatInstructions string, imagePaths []string) (*StructuringResult, error) {
 	token, projectID, location, isAPIKey := getVertexCredentials(ctx)
 	if token == "" {
 		return nil, fmt.Errorf("no credentials available for Vertex/Gemini API")
@@ -344,7 +481,7 @@ func callVertexForJSON(ctx context.Context, modelName string, text string, forma
 
 TASK: Extract English headwords from the OCR text below and output a JSON array.
 Each JSON object = ONE unique English headword with its Korean meaning.
-I am also providing the source images — use them to determine accurate bounding boxes for each word.
+I am also providing the source images — use them to determine accurate bounding boxes for each word and identify the textbook title from headers.
 
 === FORMAT-SPECIFIC EXTRACTION INSTRUCTIONS (from image analysis) ===
 %s
@@ -361,9 +498,15 @@ I am also providing the source images — use them to determine accurate boundin
 - NO SYNONYM REPLACEMENT / NO PARAPHRASTING: DO NOT replace or substitute Korean meanings with similar or general synonyms (e.g., if the image says "조산사", you MUST output "조산사". DO NOT arbitrarily change it to "산부인과 의사" or any other synonym!).
 - KEEP ORIGINAL TRANSLATIONS EXACTLY AS-IS: Preserve the original printed Korean definitions without altering, paraphrasing, or replacing them with your internal knowledge.
 
+=== MATERIAL TITLE EXTRACTION RULE ===
+- Inspect the top header area of the page/images for the textbook name, day/unit number, chapter name, or test title (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01", "워드마스터 수능 2000 Day 15", "EBS 수능특강 영어 Day 03").
+- Combine the book title, unit/day, and test type into a clean, concise title string in the root "title" property.
+- If no clear header title is found, set "title" to an empty string ("").
+
 === OUTPUT FORMAT & REAL SOURCE IMAGE RESOLUTION ===
 The source image actual physical resolution is %dx%d pixels.
 Output a JSON object containing:
+- "title" (string): Overall textbook name and unit/day (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01").
 - "imageWidth" (integer): Actual source image width (%d).
 - "imageHeight" (integer): Actual source image height (%d).
 - "words": Array of JSON objects, where each object contains:
@@ -390,10 +533,10 @@ Output a JSON object containing:
 OCR Transcriptions:
 %s`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, float64(realWidth)/float64(realHeight), realWidth, realHeight, text)
 	} else {
-		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers relative to %dx%d), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
+		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (textbook/unit title from header if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers relative to %dx%d), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
 
 Text:
-%s`, realWidth, realHeight, realWidth, realHeight, text)
+%s`, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, text)
 	}
 
 	// Build multimodal parts: images first, then text prompt
@@ -446,14 +589,13 @@ Text:
 	req.Header.Set("Content-Type", "application/json")
 	setAuthHeader(req, token, isAPIKey)
 
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return nil, RedactedError("vertex api request failed: %s", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("vertex api error (status %d): %s", resp.StatusCode, string(body))
 	}
@@ -484,7 +626,7 @@ func getBedrockBearerToken() string {
 	return LookupConfig("AWS_BEARER_TOKEN_BEDROCK")
 }
 
-func callBedrockForJSON(ctx context.Context, modelID string, text string, formatInstructions string, imagePaths []string) ([]WordItem, error) {
+func callBedrockForJSON(ctx context.Context, modelID string, text string, formatInstructions string, imagePaths []string) (*StructuringResult, error) {
 	bearerToken := getBedrockBearerToken()
 	if bearerToken == "" {
 		return nil, fmt.Errorf("AWS_BEARER_TOKEN_BEDROCK not set in environment or .env")
@@ -520,8 +662,14 @@ Each JSON object = ONE unique English headword with its Korean meaning.
 - MULTIMODAL IMAGE CROSS-CHECK & OCR CORRECTION: The text transcript may contain OCR reading errors or typos. ALWAYS look closely at the provided SOURCE IMAGES to verify the exact printed Korean definition! If the OCR text says one thing (e.g. "의심하다") but the SOURCE IMAGE clearly shows a different printed Korean word (e.g. "짐작하다"), ALWAYS prioritize and extract the EXACT printed Korean word visible in the SOURCE IMAGE!
 - NO SYNONYM REPLACEMENT / NO PARAPHRASTING: DO NOT replace or substitute Korean meanings with synonyms.
 
+=== MATERIAL TITLE EXTRACTION RULE ===
+- Inspect the top header area of the page/images for the textbook name, day/unit number, chapter name, or test title (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01", "워드마스터 수능 2000 Day 15", "EBS 수능특강 영어 Day 03").
+- Combine the book title, unit/day, and test type into a clean, concise title string in the root "title" property.
+- If no clear header title is found, set "title" to an empty string ("").
+
 === OUTPUT FORMAT & BOUNDING BOX RULES ===
 Output a JSON object containing:
+- "title" (string): Overall textbook name and unit/day (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01").
 - "imageWidth" (integer): Actual source image width (%d).
 - "imageHeight" (integer): Actual source image height (%d).
 - "words": Array of JSON objects, where each object contains:
@@ -550,10 +698,10 @@ OCR Transcriptions:
 
 Return ONLY a raw JSON array or container object without markdown codeblock preambles.`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, float64(realWidth)/float64(realHeight), realWidth, realHeight, text)
 	} else {
-		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers 0-1000), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
+		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (header title if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers 0-1000), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
 
 Text:
-%s`, realWidth, realHeight, text)
+%s`, realWidth, realHeight, realWidth, realHeight, text)
 	}
 
 	var payload map[string]interface{}
@@ -625,7 +773,11 @@ Text:
 		}
 	}
 
-	endpoint := fmt.Sprintf("https://bedrock-runtime.us-east-1.amazonaws.com/model/%s/invoke", modelID)
+	region := LookupConfig("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+	endpoint := fmt.Sprintf("https://bedrock-runtime.%s.amazonaws.com/model/%s/invoke", region, modelID)
 	jsonBytes, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonBytes))
 	if err != nil {
@@ -634,14 +786,13 @@ Text:
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
 
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("bedrock HTTP %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -674,19 +825,78 @@ Text:
 	return parseStructuredJSONResponse(jsonText)
 }
 
-func parseStructuredJSONResponse(responseText string) ([]WordItem, error) {
-	responseText = strings.TrimSpace(responseText)
-	if strings.HasPrefix(responseText, "```json") {
-		responseText = strings.TrimPrefix(responseText, "```json")
-		responseText = strings.TrimSuffix(responseText, "```")
-	} else if strings.HasPrefix(responseText, "```") {
-		responseText = strings.TrimPrefix(responseText, "```")
-		responseText = strings.TrimSuffix(responseText, "```")
+func extractJSONSubstring(text string) string {
+	text = strings.TrimSpace(text)
+	// Strip markdown blocks if present
+	if strings.Contains(text, "```json") {
+		start := strings.Index(text, "```json") + 7
+		end := strings.LastIndex(text, "```")
+		if end > start {
+			text = strings.TrimSpace(text[start:end])
+		}
+	} else if strings.Contains(text, "```") {
+		start := strings.Index(text, "```") + 3
+		end := strings.LastIndex(text, "```")
+		if end > start {
+			text = strings.TrimSpace(text[start:end])
+		}
 	}
-	responseText = strings.TrimSpace(responseText)
 
-	// 1. Try container object: { "imageWidth": 1000, "imageHeight": 1000, "words": [...] }
+	// Find outermost balanced JSON object or array that parses successfully
+	for i := 0; i < len(text); i++ {
+		ch := text[i]
+		if ch == '{' || ch == '[' {
+			openCh := ch
+			closeCh := byte('}')
+			if openCh == '[' {
+				closeCh = ']'
+			}
+			depth := 0
+			inString := false
+			escape := false
+
+			for j := i; j < len(text); j++ {
+				c := text[j]
+				if escape {
+					escape = false
+					continue
+				}
+				if c == '\\' {
+					escape = true
+					continue
+				}
+				if c == '"' {
+					inString = !inString
+					continue
+				}
+				if inString {
+					continue
+				}
+
+				if c == openCh {
+					depth++
+				} else if c == closeCh {
+					depth--
+					if depth == 0 {
+						candidate := text[i : j+1]
+						var js json.RawMessage
+						if json.Unmarshal([]byte(candidate), &js) == nil {
+							return candidate
+						}
+					}
+				}
+			}
+		}
+	}
+	return text
+}
+
+func parseStructuredJSONResponse(responseText string) (*StructuringResult, error) {
+	responseText = extractJSONSubstring(responseText)
+
+	// 1. Try container object: { "title": "...", "imageWidth": 1000, "words": [...] }
 	var container struct {
+		Title       string     `json:"title"`
 		ImageWidth  int        `json:"imageWidth"`
 		ImageHeight int        `json:"imageHeight"`
 		Words       []WordItem `json:"words"`
@@ -708,12 +918,15 @@ func parseStructuredJSONResponse(responseText string) ([]WordItem, error) {
 				container.Words[i].ImageHeight = wHeight
 			}
 		}
-		return container.Words, nil
+		return &StructuringResult{
+			Title: CleanTitle(container.Title),
+			Words: container.Words,
+		}, nil
 	}
 
 	// 2. Direct array: [ {...}, {...} ]
 	var words []WordItem
-	if err := json.Unmarshal([]byte(responseText), &words); err == nil {
+	if err := json.Unmarshal([]byte(responseText), &words); err == nil && len(words) > 0 {
 		for i := range words {
 			if words[i].ImageWidth <= 0 {
 				words[i].ImageWidth = 1000
@@ -722,19 +935,22 @@ func parseStructuredJSONResponse(responseText string) ([]WordItem, error) {
 				words[i].ImageHeight = 1000
 			}
 		}
-		return words, nil
+		return &StructuringResult{
+			Title: "",
+			Words: words,
+		}, nil
 	}
 
 	return nil, fmt.Errorf("failed to unmarshal JSON response: %s", responseText)
 }
 
-func callClaudeForJSON(ctx context.Context, apiKey, text string) ([]WordItem, error) {
-	prompt := fmt.Sprintf(`Convert the following OCR English vocabulary text into a clean JSON array of objects with keys: "no" (number), "word" (string), "pos" (Korean single-character abbreviation like "형", "명", "동", "부", "전", "접", "관", "감"), and "meaning" (exact printed Korean meaning from text - DO NOT replace or paraphrase with synonyms like changing '조산사' to '산부인과 의사').
+func callClaudeForJSON(ctx context.Context, apiKey, text string) (*StructuringResult, error) {
+	prompt := fmt.Sprintf(`Convert the following OCR English vocabulary text into a clean JSON object with "title" (textbook or unit title in header if present) and "words" array of objects with keys: "no" (number), "word" (string), "pos" (Korean single-character abbreviation like "형", "명", "동", "부", "전", "접", "관", "감"), and "meaning" (exact printed Korean meaning from text - DO NOT replace or paraphrase with synonyms like changing '조산사' to '산부인과 의사').
 
 Text:
 %s
 
-Return ONLY valid JSON array without any markdown formatting or code block.`, text)
+Return ONLY valid JSON object with "title" and "words" without any markdown formatting or code block.`, text)
 
 	payload := map[string]interface{}{
 		"model":      anthropicModel(),
@@ -756,14 +972,13 @@ Return ONLY valid JSON array without any markdown formatting or code block.`, te
 	req.Header.Set("anthropic-version", "2023-06-01")
 	req.Header.Set("content-type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("api error %d: %s", resp.StatusCode, string(body))
 	}
@@ -781,19 +996,27 @@ Return ONLY valid JSON array without any markdown formatting or code block.`, te
 		return nil, fmt.Errorf("empty content response")
 	}
 
-	responseText := strings.TrimSpace(resStruct.Content[0].Text)
-	if strings.HasPrefix(responseText, "```") {
-		lines := strings.Split(responseText, "\n")
-		if len(lines) >= 2 {
-			responseText = strings.Join(lines[1:len(lines)-1], "\n")
+	return parseStructuredJSONResponse(resStruct.Content[0].Text)
+}
+
+func parseOCRTextFallbackWithTitle(text string, preserveOrder bool) ([]WordItem, string) {
+	words := parseOCRTextFallback(text, preserveOrder)
+	lines := strings.Split(text, "\n")
+	var extractedTitle string
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if l == "" {
+			continue
+		}
+		lower := strings.ToLower(l)
+		if strings.Contains(lower, "day ") || strings.Contains(lower, "unit ") || strings.Contains(l, "VOCA") || strings.Contains(l, "수능") {
+			extractedTitle = CleanTitle(l)
+			if extractedTitle != "" {
+				break
+			}
 		}
 	}
-
-	var words []WordItem
-	if err := json.Unmarshal([]byte(responseText), &words); err != nil {
-		return nil, err
-	}
-	return words, nil
+	return words, extractedTitle
 }
 
 func parseOCRTextFallback(text string, preserveOrder bool) []WordItem {
@@ -856,15 +1079,24 @@ func parseOCRTextFallback(text string, preserveOrder bool) []WordItem {
 		}
 
 		pos := NormalizePOS(rawPos)
-		rawPosLower := strings.ToLower(rawPos)
-		if strings.Contains(rawPosLower, "v") {
-			pos = "동"
-		} else if strings.Contains(rawPosLower, "adj") || strings.Contains(rawPosLower, "a") {
-			pos = "형"
-		} else if strings.Contains(rawPosLower, "adv") || strings.Contains(rawPosLower, "ad") {
-			pos = "부"
-		} else if strings.Contains(rawPosLower, "n") {
-			pos = "명"
+		if pos == "" {
+			rawPosLower := strings.ToLower(strings.Trim(rawPos, "()[]{}., "))
+			switch {
+			case strings.HasPrefix(rawPosLower, "adv") || rawPosLower == "ad":
+				pos = "부"
+			case strings.HasPrefix(rawPosLower, "adj") || rawPosLower == "a":
+				pos = "형"
+			case strings.HasPrefix(rawPosLower, "v") || rawPosLower == "vi" || rawPosLower == "vt":
+				pos = "동"
+			case strings.HasPrefix(rawPosLower, "n"):
+				pos = "명"
+			case strings.HasPrefix(rawPosLower, "prep"):
+				pos = "전"
+			case strings.HasPrefix(rawPosLower, "conj"):
+				pos = "접"
+			default:
+				pos = "명"
+			}
 		}
 
 		words = append(words, WordItem{
@@ -912,15 +1144,20 @@ func detectBBoxScale(words []WordItem) (refMax float64, pixels bool) {
 	}
 }
 
-// normalizeBBoxes rewrites every box to BBoxOutputScale in place.
+// normalizeBBoxes rewrites every box to BBoxOutputScale in place, grouped per image.
 //
 // Boxes that arrive valid stay valid: rounding a very thin box could otherwise flatten it into
 // a degenerate one, which the caller would then mistake for missing data and overwrite with a
 // placeholder.
 func normalizeBBoxes(words []WordItem) {
-	refMax, pixels := detectBBoxScale(words)
-	if refMax == BBoxOutputScale {
-		return
+	// Group words by ImageIndex so multi-image runs scale against their respective image frame
+	groups := make(map[int][]int)
+	for i := range words {
+		idx := words[i].ImageIndex
+		if idx <= 0 {
+			idx = 1
+		}
+		groups[idx] = append(groups[idx], i)
 	}
 
 	toPct := func(v int, ref float64) int {
@@ -934,34 +1171,44 @@ func normalizeBBoxes(words []WordItem) {
 		return p
 	}
 
-	for i := range words {
-		bbox := words[i].BBox
-		if len(bbox) < 4 {
+	for _, indices := range groups {
+		var groupWords []WordItem
+		for _, idx := range indices {
+			groupWords = append(groupWords, words[idx])
+		}
+
+		refMax, pixels := detectBBoxScale(groupWords)
+		if refMax == BBoxOutputScale {
 			continue
 		}
 
-		// Pixel coordinates need each axis measured against its own image dimension; the
-		// batch maximum is only a fallback for items that lost their reference frame.
-		refY, refX := refMax, refMax
-		if pixels {
-			if h := words[i].ImageHeight; h > 0 {
-				refY = float64(h)
+		for _, idx := range indices {
+			bbox := words[idx].BBox
+			if len(bbox) < 4 {
+				continue
 			}
-			if w := words[i].ImageWidth; w > 0 {
-				refX = float64(w)
-			}
-		}
 
-		wasValid := bbox[2] > bbox[0] && bbox[3] > bbox[1]
-		bbox[0], bbox[2] = toPct(bbox[0], refY), toPct(bbox[2], refY)
-		bbox[1], bbox[3] = toPct(bbox[1], refX), toPct(bbox[3], refX)
-
-		if wasValid {
-			if bbox[2] <= bbox[0] {
-				bbox[0], bbox[2] = thinSpan(bbox[0])
+			refY, refX := refMax, refMax
+			if pixels {
+				if h := words[idx].ImageHeight; h > 0 {
+					refY = float64(h)
+				}
+				if w := words[idx].ImageWidth; w > 0 {
+					refX = float64(w)
+				}
 			}
-			if bbox[3] <= bbox[1] {
-				bbox[1], bbox[3] = thinSpan(bbox[1])
+
+			wasValid := bbox[2] > bbox[0] && bbox[3] > bbox[1]
+			bbox[0], bbox[2] = toPct(bbox[0], refY), toPct(bbox[2], refY)
+			bbox[1], bbox[3] = toPct(bbox[1], refX), toPct(bbox[3], refX)
+
+			if wasValid {
+				if bbox[2] <= bbox[0] {
+					bbox[0], bbox[2] = thinSpan(bbox[0])
+				}
+				if bbox[3] <= bbox[1] {
+					bbox[1], bbox[3] = thinSpan(bbox[1])
+				}
 			}
 		}
 	}
@@ -979,18 +1226,18 @@ func thinSpan(lo int) (int, int) {
 // copyBBox isolates the caller's array and drops anything past the four coordinates the format
 // defines. A stray fifth element would otherwise keep its original magnitude through
 // normalization and then re-trigger scale detection on the next pass.
-func copyBBox(b []int) []int {
+func copyBBox(b FlexibleBBox) FlexibleBBox {
 	if len(b) > 4 {
 		b = b[:4]
 	}
-	return append([]int(nil), b...)
+	return append(FlexibleBBox(nil), b...)
 }
 
 // bboxIsUsable reports whether a box is a well-formed rectangle already on BBoxOutputScale.
 // Anything else — too short, out of range, zero-area, inverted — is replaced by a placeholder,
 // which is what keeps the output invariant unconditional: coordinates always land in
 // 0..BBoxOutputScale and always describe a non-empty rectangle.
-func bboxIsUsable(bbox []int) bool {
+func bboxIsUsable(bbox FlexibleBBox) bool {
 	if len(bbox) < 4 {
 		return false
 	}

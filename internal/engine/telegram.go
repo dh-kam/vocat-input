@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 func GetTelegramCredentials() (string, string) {
@@ -65,14 +64,13 @@ func SendDocToTelegram(docPath, customFileName, caption string) error {
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return RedactedError("telegram request failed: %s", err)
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("telegram api error (status %d): %s", resp.StatusCode, string(respBody))
 	}

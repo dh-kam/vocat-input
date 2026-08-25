@@ -2,6 +2,8 @@ package engine
 
 import (
 	"encoding/json"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -98,11 +100,54 @@ func TestConversionRun_MarshalShape(t *testing.T) {
 
 	var decoded map[string]any
 	require.NoError(t, json.Unmarshal(data, &decoded))
-
 	assert.Equal(t, "run_1", decoded["id"])
 	assert.Equal(t, "Vocat Run 08-06 09:26", decoded["title"])
 	assert.Equal(t, "COMPLETED", decoded["status"])
-	assert.EqualValues(t, 100, decoded["progress"])
+	assert.Equal(t, float64(100), decoded["progress"])
 	assert.NotContains(t, decoded, "mu", "the mutex must never appear in output")
 	require.Contains(t, decoded, "words")
+}
+
+func TestRunStore_DeletedRunProtection(t *testing.T) {
+	dir := t.TempDir()
+	store := NewRunStore(dir)
+
+	run := &ConversionRun{ID: "run_delete_test", Status: RunStatusOCRProgress}
+	store.Save(run)
+
+	// Delete the run
+	store.Delete("run_delete_test")
+	assert.True(t, run.IsDeleted())
+
+	_, exists := store.Get("run_delete_test")
+	assert.False(t, exists)
+
+	// Late save from background worker should be ignored
+	store.Save(run)
+	_, exists = store.Get("run_delete_test")
+	assert.False(t, exists)
+}
+
+func TestRunStore_AtomicSaveAndCorruptedBackup(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := dir + "/runs_db.json"
+
+	// Write corrupted JSON
+	require.NoError(t, os.WriteFile(dbPath, []byte(`[{"id": "broken"`), 0644))
+
+	// Init store with corrupted file
+	store := NewRunStore(dir)
+	assert.Empty(t, store.List())
+
+	// Check that backup file was created
+	files, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	hasBackup := false
+	for _, f := range files {
+		if strings.Contains(f.Name(), "runs_db.json.corrupted.") {
+			hasBackup = true
+			break
+		}
+	}
+	assert.True(t, hasBackup, "Backup file should be created for corrupted db")
 }

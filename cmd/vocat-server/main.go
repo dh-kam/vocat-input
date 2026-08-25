@@ -4,15 +4,21 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 	"mime/multipart"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"vocat-input/internal/engine"
@@ -56,8 +62,9 @@ func main() {
 	_ = os.MkdirAll(outputDir, 0o755)
 
 	r := gin.Default()
+	_ = r.SetTrustedProxies(nil)
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:8080", "http://127.0.0.1:5173", "http://127.0.0.1:8080"},
+		AllowOriginFunc:  isAllowedOrigin,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization", "X-Vocat-Session"},
 		AllowCredentials: true,
@@ -92,11 +99,12 @@ func main() {
 	api := r.Group("/api")
 	{
 		// Public Auth Endpoints
-		// /login is rate-limited per client IP; the browser flow never calls it (serveSPA issues
-		// its cookie), so legitimate traffic is essentially zero and the limit is no burden.
+		// /login is rate-limited per client IP. In authRequired mode the SPA posts the
+		// administrator password here to receive a derived session cookie.
 		api.POST("/login", rateLimitByIP(newIPLimiter(10, time.Minute)), handleLogin)
 		api.POST("/logout", handleLogout)
 		api.GET("/auth/status", handleAuthStatus)
+		api.GET("/models", handleGetModels)
 
 		// Protected API Endpoints (Guarded by AuthMiddleware)
 		protected := api.Group("")
@@ -109,7 +117,7 @@ func main() {
 			protected.POST("/runs/:id/ocr", handleStartOCR)
 			protected.POST("/runs/:id/merge-convert", handleMergeAndConvert(uploadDir, outputDir))
 			protected.POST("/runs/:id/regenerate-doc", handleRegenerateDoc(outputDir))
-			protected.POST("/runs/:id/send-telegram", handleSendTelegram)
+			protected.POST("/runs/:id/send-telegram", handleSendTelegram(outputDir))
 			protected.PUT("/runs/:id/words", handleUpdateWords(outputDir))
 			protected.PUT("/runs/:id/title", handleUpdateTitle)
 			protected.DELETE("/runs/:id", handleDeleteRun(uploadDir, outputDir))
@@ -136,9 +144,10 @@ func main() {
 			return
 		}
 
-		// SPA Client Fallback — a deep link is an entry point too, so it issues a session
-		// exactly like GET / does.
-		issueSessionCookie(c)
+		// SPA Client Fallback — only issue auto-session when auth is not strictly required
+		if !authRequired {
+			issueSessionCookie(c)
+		}
 		c.File(filepath.Join(webDistDir, "index.html"))
 	})
 
@@ -146,26 +155,134 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	fmt.Printf("Vocat Auto Server listening on http://localhost:%s\n", port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatalf("Server exited with error: %v", err)
+	bindHost := resolveBindHost()
+	if err := enforceBindAuth(bindHost); err != nil {
+		log.Fatalf("%v", err)
 	}
+	bindAddr := fmt.Sprintf("%s:%s", bindHost, port)
+
+	srv := &http.Server{
+		Addr:    bindAddr,
+		Handler: r,
+	}
+
+	go func() {
+		fmt.Printf("Vocat Auto Server listening on http://%s (authRequired: %v)\n", bindAddr, authRequired)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server exited with error: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("[SHUTDOWN] Shutting down Vocat Auto Server...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("[SHUTDOWN ERROR] Server forced to shutdown: %v", err)
+	}
+
+	// Cleanly mark any in-flight runs as FAILED so state is persisted on disk
+	for _, run := range store.List() {
+		if run.Status == engine.RunStatusOCRProgress || run.Status == engine.RunStatusMerging {
+			run.SetStatus(engine.RunStatusFailed)
+			run.SetError("Server was gracefully stopped during conversion workflow. Click 'Retry Conversion' to restart.")
+			run.AddLog("⚠️ [SERVER SHUTDOWN] Server stopped. Marked as FAILED.")
+			store.Save(run)
+		}
+	}
+	log.Println("[SHUTDOWN] Vocat Auto Server cleanly stopped.")
 }
 
 // sessionSecret authenticates non-browser API clients through the Authorization or
-// X-Vocat-Session header. Browsers never see it: the server hands them an httpOnly cookie when
-// it serves the SPA (see serveSPA).
-//
-// It is resolved once at startup rather than per request, and there is no built-in default any
-// more. The previous fallback was a literal committed here and also shipped inside the built web
-// bundle, so every deployment accepted a publicly known value.
-var sessionSecret string
+// X-Vocat-Session header.
+var (
+	sessionSecret string
+	adminPassword string
+	authRequired  bool
+)
+
+const sessionCookieMaxAge = 86400
+
+// resolveBindHost picks the listen address. VOCAT_BIND_HOST wins when set; otherwise
+// VOCAT_LOCAL_ONLY=true forces loopback and the default remains 0.0.0.0.
+func resolveBindHost() string {
+	if h := engine.LookupConfig("VOCAT_BIND_HOST"); h != "" {
+		return h
+	}
+	if strings.ToLower(engine.LookupConfig("VOCAT_LOCAL_ONLY")) == "true" {
+		return "127.0.0.1"
+	}
+	return "0.0.0.0"
+}
+
+func isLoopbackBindHost(host string) bool {
+	h := strings.TrimSpace(strings.ToLower(host))
+	if h == "127.0.0.1" || h == "::1" || h == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+// enforceBindAuth refuses a non-loopback bind unless an administrator password is configured,
+// and then forces authRequired so GET / cannot hand out a session.
+func enforceBindAuth(bindHost string) error {
+	if isLoopbackBindHost(bindHost) {
+		return nil
+	}
+	if adminPassword == "" {
+		return fmt.Errorf("refusing to bind %s without VOCAT_ADMIN_PASSWORD (set VOCAT_BIND_HOST=127.0.0.1 or VOCAT_LOCAL_ONLY=true for convenience mode)", bindHost)
+	}
+	authRequired = true
+	return nil
+}
+
+// isAllowedOrigin strictly validates that the request origin belongs to localhost,
+// loopback, private RFC1918 subnets, or explicit VOCAT_ALLOWED_ORIGINS entries.
+func isAllowedOrigin(origin string) bool {
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	hostname := u.Hostname()
+	if hostname == "localhost" || hostname == "127.0.0.1" {
+		return true
+	}
+	ip := net.ParseIP(hostname)
+	if ip != nil && (ip.IsLoopback() || ip.IsPrivate()) {
+		return true
+	}
+	if allowed := engine.LookupConfig("VOCAT_ALLOWED_ORIGINS"); allowed != "" {
+		for _, item := range strings.Split(allowed, ",") {
+			trimmed := strings.TrimSpace(item)
+			if trimmed != "" && (trimmed == origin || trimmed == u.Host || trimmed == hostname) {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // resolveSessionSecret prefers an explicit VOCAT_SESSION_SECRET. Failing that it generates one
 // and keeps it in storage/session_secret, so no configuration is required, the value survives
 // restarts (a fresh one each boot would invalidate every open tab's cookie), and an API client
 // can read it from that file.
 func resolveSessionSecret(storageDir string) (string, error) {
+	adminPassword = engine.LookupConfig("VOCAT_ADMIN_PASSWORD")
+	if adminPassword == "" {
+		adminPassword = engine.LookupConfig("ADMIN_PASSWORD")
+	}
+	authRequired = adminPassword != "" || strings.ToLower(engine.LookupConfig("VOCAT_REQUIRE_AUTH")) == "true"
+	if authRequired && adminPassword == "" {
+		return "", fmt.Errorf("VOCAT_REQUIRE_AUTH is set but VOCAT_ADMIN_PASSWORD (or ADMIN_PASSWORD) is empty")
+	}
+
 	if s := engine.LookupConfig("VOCAT_SESSION_SECRET"); s != "" {
 		return s, nil
 	}
@@ -185,29 +302,91 @@ func resolveSessionSecret(storageDir string) (string, error) {
 	if err := os.WriteFile(path, []byte(secret+"\n"), 0o600); err != nil {
 		return "", fmt.Errorf("writing %s: %w", path, err)
 	}
-	log.Printf("[AUTH] VOCAT_SESSION_SECRET is not set; generated one and stored it in %s", path)
+	log.Printf("[AUTH] VOCAT_SESSION_SECRET is not set; generated one and stored it in %s (authRequired=%v)", path, authRequired)
 	return secret, nil
 }
 
-// issueSessionCookie grants the browser a session without the page ever holding the secret.
-// httpOnly keeps it away from scripts on the origin, which the previous cookie did not.
+// mintSessionToken returns an HMAC-signed session token bound to sessionSecret.
+// The cookie never carries the secret itself, so stealing it does not reveal
+// VOCAT_SESSION_SECRET and cannot be reused after expiry.
+func mintSessionToken() (string, error) {
+	if sessionSecret == "" {
+		return "", fmt.Errorf("session secret is not configured")
+	}
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", err
+	}
+	exp := time.Now().Add(time.Duration(sessionCookieMaxAge) * time.Second).Unix()
+	payload := fmt.Sprintf("%d.%s", exp, hex.EncodeToString(nonce))
+	mac := hmac.New(sha256.New, []byte(sessionSecret))
+	mac.Write([]byte(payload))
+	return payload + "." + hex.EncodeToString(mac.Sum(nil)), nil
+}
+
+func validSessionToken(tok string) bool {
+	if tok == "" || sessionSecret == "" {
+		return false
+	}
+	i := strings.LastIndex(tok, ".")
+	if i <= 0 || i == len(tok)-1 {
+		return false
+	}
+	payload, macHex := tok[:i], tok[i+1:]
+	mac, err := hex.DecodeString(macHex)
+	if err != nil {
+		return false
+	}
+	h := hmac.New(sha256.New, []byte(sessionSecret))
+	h.Write([]byte(payload))
+	if !hmac.Equal(h.Sum(nil), mac) {
+		return false
+	}
+	dot := strings.IndexByte(payload, '.')
+	if dot <= 0 {
+		return false
+	}
+	exp, err := strconv.ParseInt(payload[:dot], 10, 64)
+	if err != nil {
+		return false
+	}
+	return time.Now().Unix() < exp
+}
+
+func passwordMatches(given string) bool {
+	if adminPassword == "" || given == "" {
+		return false
+	}
+	want := sha256.Sum256([]byte(adminPassword))
+	got := sha256.Sum256([]byte(given))
+	return hmac.Equal(want[:], got[:])
+}
+
+// issueSessionCookie grants the browser a derived session token. httpOnly keeps it
+// away from scripts on the origin.
 func issueSessionCookie(c *gin.Context) {
+	tok, err := mintSessionToken()
+	if err != nil {
+		log.Printf("[AUTH] failed to mint session token: %v", err)
+		return
+	}
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "vocat_session",
-		Value:    sessionSecret,
+		Value:    tok,
 		Path:     "/",
-		MaxAge:   86400,
+		MaxAge:   sessionCookieMaxAge,
 		HttpOnly: true,
 		Secure:   c.Request.TLS != nil,
 		SameSite: http.SameSiteLaxMode,
 	})
 }
 
-// serveSPA returns index.html and, in the same response, the session the app needs to call the
-// API. The SPA used to post a secret literal compiled into its own bundle instead.
+// serveSPA returns index.html and, in non-auth-required mode, the session the app needs to call the API.
 func serveSPA(webDistDir string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		issueSessionCookie(c)
+		if !authRequired {
+			issueSessionCookie(c)
+		}
 		c.File(filepath.Join(webDistDir, "index.html"))
 	}
 }
@@ -217,16 +396,20 @@ func tokenMatches(given string) bool {
 	return given != "" && hmac.Equal([]byte(given), []byte(sessionSecret))
 }
 
-// isAuthenticated accepts the browser's session cookie or, for non-browser clients, the secret
-// in either header. All three comparisons are constant time.
+func headerCredentialOK(given string) bool {
+	return validSessionToken(given) || tokenMatches(given)
+}
+
+// isAuthenticated accepts a derived session cookie, or for non-browser clients a
+// derived token or the raw session secret in Authorization / X-Vocat-Session.
 func isAuthenticated(c *gin.Context) bool {
-	if cookieToken, err := c.Cookie("vocat_session"); err == nil && tokenMatches(cookieToken) {
+	if cookieToken, err := c.Cookie("vocat_session"); err == nil && validSessionToken(cookieToken) {
 		return true
 	}
-	if bearer, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer "); ok && tokenMatches(bearer) {
+	if bearer, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer "); ok && headerCredentialOK(bearer) {
 		return true
 	}
-	return tokenMatches(c.GetHeader("X-Vocat-Session"))
+	return headerCredentialOK(c.GetHeader("X-Vocat-Session"))
 }
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -239,31 +422,44 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   "Unauthorized access. Valid session or bearer token required to access backend API.",
 			"code":    "UNAUTHORIZED",
-			"details": "Load the web app to receive a session, or supply a valid X-Vocat-Session header.",
+			"details": "Authenticate via /api/login or supply a valid session cookie / X-Vocat-Session header.",
 		})
 		c.Abort()
 	}
 }
 
-// handleLogin remains for non-browser clients that would rather hold a cookie than repeat the
-// header. The web app no longer calls it: it receives its session from serveSPA and never holds
-// the secret.
+// handleLogin issues a derived session cookie only after the administrator password matches.
+// The session secret is never accepted here — it remains a non-browser header credential.
 func handleLogin(c *gin.Context) {
 	var req struct {
-		Secret string `json:"secret"`
+		Password string `json:"password"`
+		Secret   string `json:"secret"`
 	}
 	_ = c.ShouldBindJSON(&req)
 
-	if tokenMatches(req.Secret) {
-		issueSessionCookie(c)
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "authenticated",
-			"message": "Session successfully established",
-		})
+	if !passwordMatches(req.Password) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authentication credentials"})
 		return
 	}
 
-	c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authentication secret key"})
+	tok, err := mintSessionToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to establish session"})
+		return
+	}
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "vocat_session",
+		Value:    tok,
+		Path:     "/",
+		MaxAge:   sessionCookieMaxAge,
+		HttpOnly: true,
+		Secure:   c.Request.TLS != nil,
+		SameSite: http.SameSiteLaxMode,
+	})
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "authenticated",
+		"message": "Session successfully established",
+	})
 }
 
 func handleLogout(c *gin.Context) {
@@ -272,9 +468,9 @@ func handleLogout(c *gin.Context) {
 }
 
 func handleAuthStatus(c *gin.Context) {
-	// Reports on every credential channel the middleware accepts, not just the cookie.
 	c.JSON(http.StatusOK, gin.H{
 		"authenticated": isAuthenticated(c),
+		"authRequired":  authRequired,
 	})
 }
 
@@ -452,9 +648,10 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 				c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": fmt.Sprintf("Upload too large: maximum %d bytes per request", maxUploadBytes)})
 				return
 			}
+			c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadBytes)
 			form, err := c.MultipartForm()
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid form data"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid form data or upload too large"})
 				return
 			}
 
@@ -573,8 +770,9 @@ func handleStartOCR(c *gin.Context) {
 			failRun(r, fmt.Errorf("OCR provider '%s' not found", r.OCRProvider))
 			return
 		}
-		ctx := context.Background()
-		applyModelEnv(r)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		ctx = engine.WithOCRModel(ctx, r.OCRModel)
 
 		if err := runOCRPhase(r, provider, ctx); err != nil {
 			return
@@ -609,24 +807,31 @@ func handleMergeAndConvert(uploadDir, outputDir string) gin.HandlerFunc {
 		run.AddLog("🔮 AI Structuring Engine Launched. Merging OCR Transcriptions... (Progress: 75%)")
 		store.Save(run)
 
-		ctx := context.Background()
-		mergedText := mergeOCRResults(run)
-		imagePaths := buildImagePaths(run, uploadDir)
+		go func(r *engine.ConversionRun) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+			defer cancel()
+			ctx = engine.WithOCRModel(ctx, r.OCRModel)
+			mergedText := mergeOCRResults(r)
+			imagePaths := buildImagePaths(r, uploadDir)
 
-		words, err := structureRun(run, ctx, mergedText, imagePaths)
-		if err != nil {
-			failRun(run, fmt.Errorf("Conversion failed: %w", err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": run.Error})
-			return
-		}
+			words, err := structureRun(r, ctx, mergedText, imagePaths)
+			if err != nil {
+				failRun(r, fmt.Errorf("Conversion failed: %w", err))
+				return
+			}
 
-		writeRunOutputs(run, outputDir, words)
-		run.SetStatus(engine.RunStatusCompleted)
-		run.SetProgress(100)
-		run.AddLog("🎉 Run Completed Successfully! Vocat JSON & DOC Test Sheets Ready (Progress: 100%)")
-		store.Save(run)
+			if err := writeRunOutputs(r, outputDir, words); err != nil {
+				failRun(r, fmt.Errorf("Failed to write outputs: %w", err))
+				return
+			}
 
-		c.JSON(http.StatusOK, run)
+			r.SetStatus(engine.RunStatusCompleted)
+			r.SetProgress(100)
+			r.AddLog("🎉 Run Completed Successfully! Vocat JSON & DOC Test Sheets Ready (Progress: 100%)")
+			store.Save(r)
+		}(run)
+
+		c.JSON(http.StatusOK, gin.H{"message": "Structuring started", "run": run})
 	}
 }
 
@@ -656,8 +861,9 @@ func handleOneClickConvert(uploadDir, outputDir string) gin.HandlerFunc {
 				failRun(r, fmt.Errorf("OCR provider '%s' not found", r.OCRProvider))
 				return
 			}
-			ctx := context.Background()
-			applyModelEnv(r)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+			defer cancel()
+			ctx = engine.WithOCRModel(ctx, r.OCRModel)
 
 			// Phase 1: Full OCR Recognition (5% -> 70%)
 			if err := runOCRPhase(r, provider, ctx); err != nil {
@@ -679,7 +885,11 @@ func handleOneClickConvert(uploadDir, outputDir string) gin.HandlerFunc {
 			}
 
 			// Phase 3: Export JSON & DOC Files (100%)
-			writeRunOutputs(r, outputDir, words)
+			if err := writeRunOutputs(r, outputDir, words); err != nil {
+				failRun(r, fmt.Errorf("Failed to write outputs: %w", err))
+				return
+			}
+
 			r.SetStatus(engine.RunStatusCompleted)
 			r.SetProgress(100)
 			r.AddLog("🎉 Full Pipeline Completed! Vocat JSON & DOC Test Sheets Ready (100%)")
@@ -707,7 +917,7 @@ func handleRegenerateDoc(outputDir string) gin.HandlerFunc {
 		docFileName := fmt.Sprintf("%s.doc", run.ID)
 		docPath := filepath.Join(outputDir, docFileName)
 
-		if err := engine.GenerateDocFile(run.Words, docPath); err != nil {
+		if err := engine.GenerateDocFile(run.Words, docPath, run.Title); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to regenerate DOC: %v", err)})
 			return
 		}
@@ -724,29 +934,40 @@ func handleRegenerateDoc(outputDir string) gin.HandlerFunc {
 	}
 }
 
-func handleSendTelegram(c *gin.Context) {
-	id := c.Param("id")
-	run, ok := store.Get(id)
-	if !ok {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Run not found"})
-		return
+func handleSendTelegram(outputDir string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		run, ok := store.Get(id)
+		if !ok {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Run not found"})
+			return
+		}
+
+		if run.DocPath == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "DOC test sheet file not generated yet."})
+			return
+		}
+
+		// Ensure document path is verified inside outputDir
+		docFileName := fmt.Sprintf("%s.doc", run.ID)
+		safeDocPath := filepath.Join(outputDir, docFileName)
+		if !containedIn(outputDir, safeDocPath) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document path"})
+			return
+		}
+
+		caption := fmt.Sprintf("📚 Vocat Input Word Sheet (%s)\nWords: %d items\nProvider: %s", run.Title, len(run.Words), run.OCRProvider)
+		sendName := engine.SanitizeFileName(run.Title)
+		if err := engine.SendDocToTelegram(safeDocPath, sendName, caption); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Telegram delivery failed: %v", err)})
+			return
+		}
+
+		run.AddLog("✈️ DOC Test Sheet Successfully Transmitted to Telegram!")
+		store.Save(run)
+
+		c.JSON(http.StatusOK, gin.H{"message": "Document successfully sent to Telegram", "run": run})
 	}
-
-	if run.DocPath == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "DOC test sheet file not generated yet."})
-		return
-	}
-
-	caption := fmt.Sprintf("📚 Vocat Input Word Sheet (%s)\nWords: %d items\nProvider: %s", run.Title, len(run.Words), run.OCRProvider)
-	if err := engine.SendDocToTelegram(run.DocPath, run.Title, caption); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Telegram delivery failed: %v", err)})
-		return
-	}
-
-	run.AddLog("✈️ DOC Test Sheet Successfully Transmitted to Telegram!")
-	store.Save(run)
-
-	c.JSON(http.StatusOK, gin.H{"message": "Document successfully sent to Telegram", "run": run})
 }
 
 func handleUpdateWords(outputDir string) gin.HandlerFunc {
@@ -766,7 +987,7 @@ func handleUpdateWords(outputDir string) gin.HandlerFunc {
 			return
 		}
 
-		// Through the setter, so this does not race the marshaller reading the same run.
+		prevWords := run.Words
 		run.SetWords(payload.Words)
 
 		jsonFileName := fmt.Sprintf("%s.json", run.ID)
@@ -774,9 +995,28 @@ func handleUpdateWords(outputDir string) gin.HandlerFunc {
 		jsonPath := filepath.Join(outputDir, jsonFileName)
 		docPath := filepath.Join(outputDir, docFileName)
 
-		jsonBytes, _ := json.MarshalIndent(payload.Words, "", "  ")
-		_ = os.WriteFile(jsonPath, jsonBytes, 0o644)
-		_ = engine.GenerateDocFile(payload.Words, docPath)
+		jsonBytes, err := json.MarshalIndent(payload.Words, "", "  ")
+		if err != nil {
+			run.SetWords(prevWords)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to marshal words: %v", err)})
+			return
+		}
+
+		prevJSONBytes, _ := os.ReadFile(jsonPath)
+
+		if err := os.WriteFile(jsonPath, jsonBytes, 0o644); err != nil {
+			run.SetWords(prevWords)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to write JSON output: %v", err)})
+			return
+		}
+		if err := engine.GenerateDocFile(payload.Words, docPath, run.Title); err != nil {
+			run.SetWords(prevWords)
+			if prevJSONBytes != nil {
+				_ = os.WriteFile(jsonPath, prevJSONBytes, 0o644)
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to generate DOC file: %v", err)})
+			return
+		}
 
 		store.Save(run)
 		c.JSON(http.StatusOK, run)
@@ -811,6 +1051,9 @@ func handleDeleteRun(uploadDir, outputDir string) gin.HandlerFunc {
 			return
 		}
 
+		// Delete from in-memory store and mark deleted FIRST to stop background workers
+		store.Delete(id)
+
 		// Delete uploaded images, but only files this server actually wrote. Unlinking a
 		// stored path unconditionally made run deletion a way to remove any file the process
 		// could reach, and it would also destroy source material under imgs/ that a run
@@ -831,9 +1074,6 @@ func handleDeleteRun(uploadDir, outputDir string) gin.HandlerFunc {
 		_ = os.Remove(filepath.Join(outputDir, fmt.Sprintf("%s.json", id)))
 		_ = os.Remove(filepath.Join(outputDir, fmt.Sprintf("%s.doc", id)))
 
-		// Delete from in-memory store
-		store.Delete(id)
-
 		c.JSON(http.StatusOK, gin.H{"message": "Run and associated files deleted successfully", "id": id})
 	}
 }
@@ -850,6 +1090,7 @@ func handleDownloadJSON(c *gin.Context) {
 	if fileName == "" {
 		fileName = run.ID
 	}
+	fileName = engine.SanitizeFileName(fileName)
 	if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
 		fileName += ".json"
 	}
@@ -868,6 +1109,7 @@ func handleDownloadDoc(c *gin.Context) {
 	if fileName == "" {
 		fileName = run.ID
 	}
+	fileName = engine.SanitizeFileName(fileName)
 	if !strings.HasSuffix(strings.ToLower(fileName), ".doc") {
 		fileName += ".doc"
 	}
@@ -886,5 +1128,55 @@ func handleADBInput(c *gin.Context) {
 		"message":   "ADB input triggered for Vocat app",
 		"runId":     run.ID,
 		"wordCount": len(run.Words),
+	})
+}
+
+type ModelOption struct {
+	ID      string `json:"id"`
+	Label   string `json:"label"`
+	Desc    string `json:"desc"`
+	Default bool   `json:"default,omitempty"`
+}
+
+type ProviderOption struct {
+	ID           string        `json:"id"`
+	Label        string        `json:"label"`
+	Desc         string        `json:"desc"`
+	DefaultModel string        `json:"defaultModel"`
+	Models       []ModelOption `json:"models"`
+}
+
+func handleGetModels(c *gin.Context) {
+	providers := []ProviderOption{
+		{
+			ID:           "vertex",
+			Label:        "GCP Vertex",
+			Desc:         "Google Cloud Vertex AI (Gemini 2.5)",
+			DefaultModel: "gemini-2.5-flash",
+			Models: []ModelOption{
+				{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Desc: "Fast, Balanced (Recommended)", Default: true},
+				{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Desc: "Best Accuracy & Deep Reasoning"},
+				{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput"},
+				{ID: "gemini-1.5-pro", Label: "Gemini 1.5 Pro", Desc: "Legacy Pro Model"},
+				{ID: "gemini-1.5-flash", Label: "Gemini 1.5 Flash", Desc: "Lightweight & Fast"},
+			},
+		},
+		{
+			ID:           "bedrock",
+			Label:        "AWS Bedrock",
+			Desc:         "Amazon Bedrock (Claude 4.6 & Nova)",
+			DefaultModel: "us.anthropic.claude-sonnet-4-6",
+			Models: []ModelOption{
+				{ID: "us.anthropic.claude-sonnet-4-6", Label: "Claude 4.6 Sonnet", Desc: "State-of-the-art AI (Recommended)", Default: true},
+				{ID: "us.anthropic.claude-3-7-sonnet-20250219-v1:0", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
+				{ID: "us.anthropic.claude-3-5-sonnet-20241022-v2:0", Label: "Claude 3.5 Sonnet v2", Desc: "High Performance Multimodal"},
+				{ID: "amazon.nova-pro-v1:0", Label: "Nova Pro", Desc: "Higher Accuracy Reasoning"},
+				{ID: "amazon.nova-lite-v1:0", Label: "Nova Lite", Desc: "Fast, Cost-Effective"},
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"providers": providers,
 	})
 }

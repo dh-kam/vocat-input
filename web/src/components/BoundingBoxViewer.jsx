@@ -167,16 +167,26 @@ export function InteractiveRedBoxModal({ wordItem, words = [], bboxScale, imageU
     setPosition({ x: 0, y: 15 });
   };
 
+  // Unified pointer coordinate extractor for mouse and touch events
+  const point = (e) => {
+    const t = e.touches?.[0] || e.changedTouches?.[0];
+    if (t) return { x: t.clientX, y: t.clientY };
+    return { x: e.clientX, y: e.clientY };
+  };
+
   const handleMouseDown = (e) => {
+    e.preventDefault();
+    const p = point(e);
     setIsDragging(true);
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    setDragStart({ x: p.x - position.x, y: p.y - position.y });
   };
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
+    const p = point(e);
     setPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
+      x: p.x - dragStart.x,
+      y: p.y - dragStart.y
     });
   };
 
@@ -293,7 +303,11 @@ export function InteractiveRedBoxModal({ wordItem, words = [], bboxScale, imageU
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className={`flex-1 relative overflow-hidden bg-slate-950 flex items-center justify-center select-none ${
+            onTouchStart={handleMouseDown}
+            onTouchMove={handleMouseMove}
+            onTouchEnd={handleMouseUp}
+            onTouchCancel={handleMouseUp}
+            className={`flex-1 relative overflow-hidden bg-slate-950 flex items-center justify-center select-none touch-none ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >

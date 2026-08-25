@@ -87,3 +87,98 @@ func TestGenerateDocFile_Regression(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanTitle(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{
+			input: "  **절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01**  ",
+			want:  "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01",
+		},
+		{
+			input: "Title: 워드마스터 수능 2000 DAY 15",
+			want:  "워드마스터 수능 2000 DAY 15",
+		},
+		{
+			input: "교재명: `EBS 수능특강 영어 Day 03`",
+			want:  "EBS 수능특강 영어 Day 03",
+		},
+		{
+			input: "단어장",
+			want:  "", // Generic name filtered out
+		},
+		{
+			input: "null",
+			want:  "",
+		},
+		{
+			input: "none",
+			want:  "",
+		},
+		{
+			input: "A",
+			want:  "", // Too short
+		},
+		{
+			input: "\"Hackers TOEIC Voca Day 01 (기초)\"",
+			want:  "Hackers TOEIC Voca Day 01 (기초)",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			got := engine.CleanTitle(tc.input)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestSanitizeFileName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{
+			input: "절대수능맵 VOCA Inter 3 / DAY 01: Test",
+			want:  "절대수능맵 VOCA Inter 3 _ DAY 01_ Test",
+		},
+		{
+			input: "Word<Master>*?|Doc",
+			want:  "Word_Master____Doc",
+		},
+		{
+			input: "   ",
+			want:  "Vocat_Material",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			got := engine.SanitizeFileName(tc.input)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestGenerateDocFile_CustomTitle(t *testing.T) {
+	words := []engine.WordItem{
+		{No: 1, Word: "apple", Pos: "명", Meaning: "사과"},
+	}
+	customTitle := "절대수능맵 VOCA Inter 3 DAY 01 (기본)"
+	tempDocPath := filepath.Join(t.TempDir(), "test.doc")
+
+	err := engine.GenerateDocFile(words, tempDocPath, customTitle)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(tempDocPath)
+	require.NoError(t, err)
+
+	var book engine.VocatBook
+	err = json.Unmarshal(data, &book)
+	require.NoError(t, err)
+
+	assert.Equal(t, customTitle, book.Vocabulary["name"])
+	assert.EqualValues(t, 1, book.Vocabulary["total"])
+}

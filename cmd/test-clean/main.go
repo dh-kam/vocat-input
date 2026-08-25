@@ -23,13 +23,14 @@ func main() {
 	ctx := context.Background()
 
 	fmt.Println("=== RUNNING CLEAN VERIFICATION CONVERSION ===")
-	words, err := engine.ConvertOCRToVocatJSON(ctx, "TestClean", true, imagePaths, "bedrock", "us.anthropic.claude-sonnet-4-6")
+	result, err := engine.ConvertOCRToVocatJSON(ctx, "TestClean", true, imagePaths, "bedrock", "us.anthropic.claude-sonnet-4-6")
 	if err != nil {
 		fmt.Printf("❌ Conversion failed: %v\n", err)
 		return
 	}
+	words := result.Words
 
-	fmt.Printf("\n✅ EXTRACTED TOTAL %d WORDS:\n", len(words))
+	fmt.Printf("\n✅ EXTRACTED TOTAL %d WORDS (Title: %q):\n", len(words), result.Title)
 	for idx, w := range words {
 		fmt.Printf("%2d | No: %2d | Word: %-20s | POS: %s | Meaning: %s\n", idx+1, w.No, w.Word, w.Pos, w.Meaning)
 	}

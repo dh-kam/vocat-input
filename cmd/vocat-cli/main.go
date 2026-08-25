@@ -146,11 +146,16 @@ func runProcess(ctx context.Context, opts ProcessOptions) error {
 	mergedText := strings.Join(ocrTexts, "\n\n")
 	fmt.Println("\033[1;36m[vocat-cli]\033[0m Merging OCR texts and running AI structuring...")
 
-	words, err := engine.ConvertOCRToVocatJSON(ctx, mergedText, opts.PreserveOrder, imagePaths, opts.OCRProvider, opts.OCRModel)
+	result, err := engine.ConvertOCRToVocatJSON(ctx, mergedText, opts.PreserveOrder, imagePaths, opts.OCRProvider, opts.OCRModel)
 	if err != nil {
 		return fmt.Errorf("\033[1;31m❌ [ERROR] Convert OCR to JSON failed: %v\033[0m", err)
 	}
 
+	if result.Title != "" {
+		fmt.Printf("\033[1;35m[vocat-cli] 🏷️ Extracted Material Title: '%s'\033[0m\n", result.Title)
+	}
+
+	words := result.Words
 	jsonBytes, err := json.MarshalIndent(words, "", "  ")
 	if err != nil {
 		return fmt.Errorf("\033[1;31m❌ [ERROR] Marshal JSON failed: %v\033[0m", err)
@@ -161,7 +166,7 @@ func runProcess(ctx context.Context, opts ProcessOptions) error {
 	}
 	fmt.Printf("\033[1;32m[vocat-cli] ✅ JSON output saved to: %s (%d words)\033[0m\n", opts.OutJSON, len(words))
 
-	if err := engine.GenerateDocFile(words, opts.OutDoc); err != nil {
+	if err := engine.GenerateDocFile(words, opts.OutDoc, result.Title); err != nil {
 		return fmt.Errorf("\033[1;31m❌ [ERROR] Generate DOC file failed: %v\033[0m", err)
 	}
 	fmt.Printf("\033[1;32m[vocat-cli] ✅ DOC test sheet saved to: %s\033[0m\n", opts.OutDoc)
@@ -250,15 +255,23 @@ func runConvert(ctx context.Context, opts ConvertOptions) error {
 		return errors.New("one of --text or --file is required")
 	}
 
-	words, err := engine.ConvertOCRToVocatJSON(ctx, text, true, nil, "doublecheck", "")
+	result, err := engine.ConvertOCRToVocatJSON(ctx, text, true, nil, "doublecheck", "")
 	if err != nil {
 		return err
 	}
 
-	jsonBytes, _ := json.MarshalIndent(words, "", "  ")
-	_ = os.WriteFile(opts.OutJSON, jsonBytes, 0o644)
-	_ = engine.GenerateDocFile(words, opts.OutDoc)
+	words := result.Words
+	jsonBytes, err := json.MarshalIndent(words, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal JSON: %w", err)
+	}
+	if err := os.WriteFile(opts.OutJSON, jsonBytes, 0o644); err != nil {
+		return fmt.Errorf("write JSON output %s: %w", opts.OutJSON, err)
+	}
+	if err := engine.GenerateDocFile(words, opts.OutDoc, result.Title); err != nil {
+		return fmt.Errorf("generate DOC file %s: %w", opts.OutDoc, err)
+	}
 
-	fmt.Printf("[vocat-cli] Saved %s and %s (%d words)\n", opts.OutJSON, opts.OutDoc, len(words))
+	fmt.Printf("[vocat-cli] Saved %s and %s (%d words, Title: '%s')\n", opts.OutJSON, opts.OutDoc, len(words), result.Title)
 	return nil
 }

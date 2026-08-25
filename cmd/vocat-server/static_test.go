@@ -57,8 +57,10 @@ func TestStaticUploads_ServesWithSession(t *testing.T) {
 	r := gin.New()
 	registerAssetRoutes(t, r, dir)
 
+	tok, err := mintSessionToken()
+	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodGet, "/uploads/page.jpg", nil)
-	req.AddCookie(&http.Cookie{Name: "vocat_session", Value: "the-secret"})
+	req.AddCookie(&http.Cookie{Name: "vocat_session", Value: tok})
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 

@@ -124,11 +124,12 @@ func cmdGenerate(args []string) {
 	}
 
 	fmt.Printf("calling engine.ConvertOCRToVocatJSON (provider=%s model=%s)…\n", p, m)
-	words, err := engine.ConvertOCRToVocatJSON(context.Background(), mergedText, run.PreserveOrder, run.Images, p, m)
+	result, err := engine.ConvertOCRToVocatJSON(context.Background(), mergedText, run.PreserveOrder, run.Images, p, m)
 	if err != nil {
 		exitf("structuring failed: %v", err)
 	}
-	fmt.Printf("AFTER:  %s\n", bboxHealth(words))
+	words := result.Words
+	fmt.Printf("AFTER:  %s (Title: %q)\n", bboxHealth(words), result.Title)
 
 	out := *outWords
 	if out == "" {

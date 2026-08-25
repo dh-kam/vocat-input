@@ -18,6 +18,28 @@ import (
 	"time"
 )
 
+var defaultHTTPClient = &http.Client{
+	Timeout: 120 * time.Second,
+}
+
+type modelContextKey struct{}
+
+// WithOCRModel returns a child context carrying the requested OCR model ID.
+func WithOCRModel(ctx context.Context, model string) context.Context {
+	return context.WithValue(ctx, modelContextKey{}, model)
+}
+
+// GetOCRModel retrieves the model ID stored in the context, if any.
+func GetOCRModel(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if v, ok := ctx.Value(modelContextKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
 type OCRProvider interface {
 	Name() string
 	ProcessImage(ctx context.Context, imagePath string) (string, error)
@@ -141,6 +163,7 @@ func (m *MultiChainOCRProvider) Name() string {
 
 func (m *MultiChainOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
 	var results []string
+	successCount := 0
 	for i, provider := range m.Providers {
 		log.Printf("[MultiChain OCR] Executing Step %d/%d: %s...", i+1, len(m.Providers), provider.Name())
 		text, err := provider.ProcessImage(ctx, imagePath)
@@ -150,7 +173,11 @@ func (m *MultiChainOCRProvider) ProcessImage(ctx context.Context, imagePath stri
 		} else {
 			log.Printf("[MultiChain OCR] Provider %s completed successfully.", provider.Name())
 			results = append(results, fmt.Sprintf("=== OCR PROVIDER #%d (%s) ===\n%s", i+1, provider.Name(), text))
+			successCount++
 		}
+	}
+	if successCount == 0 && len(m.Providers) > 0 {
+		return "", fmt.Errorf("all %d OCR providers in chain failed", len(m.Providers))
 	}
 	return strings.Join(results, "\n\n"), nil
 }
@@ -317,8 +344,11 @@ CRITICAL RULES FOR TRANSCRIPTION:
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	modelName := LookupConfig("VERTEX_MODEL")
+	modelName := GetOCRModel(ctx)
 	if modelName == "" {
+		modelName = LookupConfig("VERTEX_MODEL")
+	}
+	if modelName == "" || strings.Contains(strings.ToLower(modelName), "claude") {
 		modelName = "gemini-2.5-flash"
 	}
 
@@ -338,14 +368,13 @@ CRITICAL RULES FOR TRANSCRIPTION:
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
 
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return "", RedactedError("vertex api request failed: %s", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("vertex api error (status %d): %s", resp.StatusCode, string(body))
 	}
@@ -470,7 +499,10 @@ Transcribe all text from this image accurately while preserving structural layou
 		"amazon.nova-pro-v1:0",
 		"us.amazon.nova-lite-v1:0",
 	}
-	if envModel := LookupConfig("BEDROCK_MODEL"); envModel != "" {
+	ctxModel := GetOCRModel(ctx)
+	if ctxModel != "" && !strings.Contains(strings.ToLower(ctxModel), "gemini") {
+		candidateModels = append([]string{ctxModel}, candidateModels...)
+	} else if envModel := LookupConfig("BEDROCK_MODEL"); envModel != "" && !strings.Contains(strings.ToLower(envModel), "gemini") {
 		candidateModels = append([]string{envModel}, candidateModels...)
 	}
 
@@ -485,14 +517,13 @@ Transcribe all text from this image accurately while preserving structural layou
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", bearerToken))
 
-		client := &http.Client{Timeout: 35 * time.Second}
-		resp, err := client.Do(req)
+		resp, err := defaultHTTPClient.Do(req)
 		if err != nil {
 			lastErr = RedactedError("bedrock request failed for "+modelID+": %s", err)
 			continue
 		}
 
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 		resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -603,14 +634,13 @@ func (a *AnthropicOCRProvider) ProcessImage(ctx context.Context, imagePath strin
 	req.Header.Set("anthropic-version", "2023-06-01")
 	req.Header.Set("content-type", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return "", RedactedError("anthropic api request failed: %s", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("anthropic api error (status %d): %s", resp.StatusCode, string(body))
 	}

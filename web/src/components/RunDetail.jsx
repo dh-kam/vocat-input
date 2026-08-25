@@ -4,7 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { 
   Sparkles, FileJson, FileText, Smartphone, CheckCircle2, Loader2, 
   Edit3, Plus, Trash2, Save, Eye, Terminal, Send, Image as ImageIcon, 
-  Layers, RefreshCw, ArrowUp, ArrowDown, Search, X, Pencil, Check, AlertTriangle
+  Layers, RefreshCw, ArrowUp, ArrowDown, Search, X, Pencil, Check, AlertTriangle, ChevronLeft
 } from 'lucide-react';
 import { CroppedEvidenceThumbnail, InteractiveRedBoxModal } from './BoundingBoxViewer';
 import DocPreviewModal from './DocPreviewModal';
@@ -17,7 +17,8 @@ export default function RunDetail({
   onSendTelegram,
   onUpdateWords,
   onUpdateTitle,
-  onTriggerADB
+  onTriggerADB,
+  onBackToList
 }) {
   // The API and the /uploads, /outputs asset routes share an origin. Deriving the asset root from
   // apiBase keeps them on the right host whether the app is served same-origin (apiBase = "/api"
@@ -38,6 +39,7 @@ export default function RunDetail({
 
   // Discard changes modal state
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [pendingBack, setPendingBack] = useState(false);
   
   // Doc preview state
   const [showDocPreview, setShowDocPreview] = useState(false);
@@ -64,11 +66,17 @@ export default function RunDetail({
     }
   }, [run?.id, run?.words, isEditing]);
 
-  // ESC Key listener for Edit Mode
+  // ESC and Ctrl/Cmd+S Key listeners for Edit Mode
   useEffect(() => {
     if (!isEditing) return;
 
     const handleKeyDown = (e) => {
+      // Ctrl+S / Cmd+S shortcut to save edits immediately
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveWords();
+        return;
+      }
       if (e.key === 'Escape') {
         // Compare against the same ordering editableWords was built with, otherwise a server
         // response in any other order reads as an unsaved edit and the discard prompt appears
@@ -76,6 +84,7 @@ export default function RunDetail({
         const originalJson = JSON.stringify(sortByNo(run?.words || []));
         const currentJson = JSON.stringify(editableWords);
         if (originalJson !== currentJson) {
+          setPendingBack(false);
           setShowDiscardModal(true);
         } else {
           setIsEditing(false);
@@ -85,7 +94,7 @@ export default function RunDetail({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, editableWords, run?.words]);
+  }, [isEditing, editableWords, run?.words, isSavingWords]);
 
   // Smart Auto-Scroll when new logs arrive (only if user is focused at the bottom)
   useEffect(() => {
@@ -117,12 +126,23 @@ export default function RunDetail({
 
   if (!run) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-12 border border-slate-200 rounded-3xl bg-white/80 text-center shadow-sm">
+      <div className="h-full flex flex-col items-center justify-center p-8 sm:p-12 border border-slate-200 rounded-3xl bg-white/80 text-center shadow-sm" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+        {onBackToList && (
+          <button
+            type="button"
+            onClick={onBackToList}
+            className="lg:hidden mb-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-sky-600 text-xs font-extrabold shadow-sm active:scale-95 transition-all"
+            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back to Runs List</span>
+          </button>
+        )}
         <div className="w-16 h-16 mb-4 rounded-3xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600">
           <Layers className="w-8 h-8" />
         </div>
-        <h3 className="text-lg font-bold text-slate-800">No Run Selected</h3>
-        <p className="text-sm text-slate-500 mt-1 max-w-sm">Select a workflow run from the left panel or create a new run to view AI OCR & vocabulary extraction evidence</p>
+        <h3 className="text-lg font-bold text-slate-800" style={{ color: 'var(--text-main)' }}>No Run Selected</h3>
+        <p className="text-sm text-slate-500 mt-1 max-w-sm" style={{ color: 'var(--text-muted)' }}>Select a workflow run from the left panel or create a new run to view AI OCR & vocabulary extraction evidence</p>
       </div>
     );
   }
@@ -198,13 +218,32 @@ export default function RunDetail({
   };
 
   const handleSaveWords = async () => {
+    if (isSavingWords || !run) return;
     setIsSavingWords(true);
-    await onUpdateWords(run.id, editableWords);
-    if (onRegenerateDoc) {
-      await onRegenerateDoc(run.id);
+    try {
+      await onUpdateWords(run.id, editableWords);
+      if (onRegenerateDoc) {
+        await onRegenerateDoc(run.id);
+      }
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to save words:', err);
+    } finally {
+      setIsSavingWords(false);
     }
-    setIsSavingWords(false);
-    setIsEditing(false);
+  };
+
+  const handleBackToList = () => {
+    if (isEditing) {
+      const originalJson = JSON.stringify(sortByNo(run?.words || []));
+      const currentJson = JSON.stringify(editableWords);
+      if (originalJson !== currentJson) {
+        setPendingBack(true);
+        setShowDiscardModal(true);
+        return;
+      }
+    }
+    if (onBackToList) onBackToList();
   };
 
   const handleDownloadDoc = async () => {
@@ -279,16 +318,31 @@ export default function RunDetail({
   return (
     <div className="flex flex-col space-y-6">
       
+      {/* Mobile Back Button */}
+      {onBackToList && (
+        <div className="lg:hidden">
+          <button
+            type="button"
+            onClick={handleBackToList}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-sky-600 hover:border-sky-300 text-xs font-extrabold shadow-sm active:scale-95 transition-all"
+            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back to Runs List</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Banner & Control Bar */}
-      <div className="p-7 rounded-3xl border shadow-md space-y-6" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+      <div className="p-4 sm:p-7 rounded-2xl sm:rounded-3xl border shadow-md space-y-5 sm:space-y-6" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
         
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 shadow-inner">
-              <Sparkles className="w-7 h-7" />
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 shadow-inner shrink-0">
+              <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
             </div>
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 {isEditingTitle ? (
                   <div className="flex items-center gap-2">
                     <input
@@ -623,7 +677,8 @@ export default function RunDetail({
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+          {/* Desktop Table View (hidden on mobile) */}
+          <div className="hidden sm:block overflow-x-auto rounded-2xl border border-slate-200 bg-white">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-700 font-black border-b border-slate-200 uppercase tracking-wider text-xs">
                 <tr>
@@ -674,7 +729,7 @@ export default function RunDetail({
                             <select
                               value={wordItem.pos || '명'}
                               onChange={(e) => handleWordChange(index, 'pos', e.target.value)}
-                              className="w-7 h-7 rounded-full bg-purple-50 border border-purple-300 text-center font-black text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500/30 text-xs shadow-xs cursor-pointer appearance-none flex items-center justify-center pl-1.5"
+                              className="w-9 h-9 rounded-full bg-purple-50 border border-purple-300 text-center font-black text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500/30 text-xs shadow-xs cursor-pointer appearance-none flex items-center justify-center pl-2"
                               title="품사 선택"
                             >
                               <option value="명">명</option>
@@ -689,7 +744,7 @@ export default function RunDetail({
                           </div>
                         ) : (
                           <div className="flex justify-center">
-                            <span className="w-6.5 h-6.5 rounded-full bg-purple-100 text-purple-900 font-black border border-purple-300 text-xs flex items-center justify-center shadow-xs">
+                            <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-900 font-black border border-purple-300 text-xs flex items-center justify-center shadow-xs">
                               {wordItem.pos}
                             </span>
                           </div>
@@ -745,6 +800,112 @@ export default function RunDetail({
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View (visible only on mobile) */}
+          <div className="sm:hidden space-y-2.5">
+            {filteredWords.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 font-semibold text-base rounded-2xl border border-slate-200 bg-white">
+                {searchQuery ? `No matching words found for "${searchQuery}"` : "No vocabulary words extracted yet. Run conversion to process."}
+              </div>
+            ) : (
+              filteredWords.map(({ word: wordItem, index }) => (
+                <div
+                  key={index}
+                  onClick={() => !isEditing && setSelectedWord(wordItem)}
+                  className={`rounded-2xl border bg-white p-4 transition-all active:scale-[0.98] ${
+                    selectedWord?.word === wordItem.word
+                      ? 'border-sky-300 bg-sky-50/60 shadow-sm shadow-sky-200/50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {/* Card Header: No + Word + POS */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-mono font-bold text-slate-400 min-w-[24px]">{wordItem.no || index + 1}</span>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={wordItem.word}
+                        onChange={(e) => handleWordChange(index, 'word', e.target.value)}
+                        className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-base font-bold text-slate-900 focus:outline-none focus:border-sky-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span className="flex-1 font-bold text-base text-slate-900">{wordItem.word}</span>
+                    )}
+                    {isEditing ? (
+                      <select
+                        value={wordItem.pos || '명'}
+                        onChange={(e) => handleWordChange(index, 'pos', e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-11 h-11 rounded-full bg-purple-50 border border-purple-300 text-center font-black text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500/30 text-sm shadow-xs cursor-pointer appearance-none shrink-0 pl-2.5"
+                        title="품사 선택"
+                      >
+                        <option value="명">명</option>
+                        <option value="동">동</option>
+                        <option value="형">형</option>
+                        <option value="부">부</option>
+                        <option value="전">전</option>
+                        <option value="접">접</option>
+                        <option value="관">관</option>
+                        <option value="감">감</option>
+                      </select>
+                    ) : (
+                      <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-900 font-black border border-purple-300 text-xs flex items-center justify-center shadow-xs shrink-0">
+                        {wordItem.pos}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card Body: Meaning */}
+                  <div className="pl-9">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={wordItem.meaning}
+                        onChange={(e) => handleWordChange(index, 'meaning', e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:border-sky-500"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium text-slate-600">{wordItem.meaning}</p>
+                    )}
+                  </div>
+
+                  {/* Card Footer: Evidence + Delete */}
+                  <div className="flex items-center justify-between mt-3 pl-9">
+                    <div>
+                      {getSourceImageForWord(wordItem) ? (
+                        <CroppedEvidenceThumbnail
+                          imageUrl={`${assetBase}/uploads/${getSourceImageForWord(wordItem).imageName}`}
+                          bbox={wordItem.bbox || wordItem.bBox}
+                          bboxScale={run.bboxScale}
+                          imageWidth={wordItem.imageWidth}
+                          imageHeight={wordItem.imageHeight}
+                          word={wordItem.word}
+                          onClick={(e) => { e.stopPropagation(); setSelectedWord(wordItem); }}
+                        />
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedWord(wordItem); }}
+                          className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-sky-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                        >
+                          <Eye className="w-4 h-4 text-sky-600" /> View
+                        </button>
+                      )}
+                    </div>
+                    {isEditing && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteWord(index); }}
+                        className="p-2.5 rounded-xl text-rose-500 hover:bg-rose-50 active:bg-rose-100 transition-colors"
+                      >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                </div>
+              ))
+            )}
           </div>
         </Tabs.Content>
 
@@ -856,34 +1017,43 @@ export default function RunDetail({
       )}
 
       {/* ESC Discard Changes Confirmation Modal */}
+      {/* Discard Changes Confirmation Modal */}
       {showDiscardModal && (
-        <Dialog.Root open={true} onOpenChange={(open) => !open && setShowDiscardModal(false)}>
+        <Dialog.Root open={true} onOpenChange={(open) => {
+          if (!open) {
+            setPendingBack(false);
+            setShowDiscardModal(false);
+          }
+        }}>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm radix-overlay-anim" />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <Dialog.Content className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl radix-content-anim focus:outline-none">
+              <Dialog.Content className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl radix-content-anim focus:outline-none" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
                 <div className="flex items-center gap-3.5 mb-4">
                   <div className="w-11 h-11 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-600">
                     <AlertTriangle className="w-6 h-6" />
                   </div>
                   <div>
-                    <Dialog.Title className="text-lg font-black text-slate-900">
+                    <Dialog.Title className="text-lg font-black text-slate-900" style={{ color: 'var(--text-main)' }}>
                       Discard Unsaved Changes?
                     </Dialog.Title>
-                    <Dialog.Description className="text-xs font-semibold text-slate-500 mt-0.5">
-                      You pressed ESC while editing vocabulary list
+                    <Dialog.Description className="text-xs font-semibold text-slate-500 mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {pendingBack ? "You have unsaved edits while navigating back" : "You pressed ESC while editing vocabulary list"}
                     </Dialog.Description>
                   </div>
                 </div>
 
-                <p className="text-sm font-medium text-slate-700 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 mb-5">
+                <p className="text-sm font-medium text-slate-700 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 mb-5" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-sub)' }}>
                   You have unsaved edits in the vocabulary table. Exiting now will revert all your changes to the original state.
                 </p>
 
                 <div className="flex items-center justify-end gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setShowDiscardModal(false)}
+                    onClick={() => {
+                      setPendingBack(false);
+                      setShowDiscardModal(false);
+                    }}
                     className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >
                     Keep Editing
@@ -892,10 +1062,14 @@ export default function RunDetail({
                     type="button"
                     onClick={() => {
                       if (run && Array.isArray(run.words)) {
-                        setEditableWords([...run.words]);
+                        setEditableWords(sortByNo(run.words));
                       }
                       setIsEditing(false);
                       setShowDiscardModal(false);
+                      if (pendingBack && onBackToList) {
+                        setPendingBack(false);
+                        onBackToList();
+                      }
                     }}
                     className="px-5 py-2.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-500/20 transition-all flex items-center gap-1.5"
                   >

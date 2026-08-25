@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Component } from 'react';
 import * as Toast from '@radix-ui/react-toast';
 import { Sparkles, CheckCircle2, AlertCircle, Layers, ChevronDown } from 'lucide-react';
 import RunList from './components/RunList';
@@ -6,6 +6,49 @@ import RunDetail from './components/RunDetail';
 import NewRunModal from './components/NewRunModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
+
+// Error Boundary: Prevents blank white screen on uncaught render errors
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('[Vocat ErrorBoundary]', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--bg-canvas, #f8fafc)' }}>
+          <div className="max-w-md w-full text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--accent-color, #e11d48) 15%, var(--panel-bg, #fff1f2))' }}>
+              <AlertCircle className="w-8 h-8 text-rose-600" />
+            </div>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--text-main, #0f172a)' }}>Something went wrong</h2>
+            <p className="text-sm" style={{ color: 'var(--text-muted, #64748b)' }}>
+              An unexpected error occurred. Please reload the page to try again.
+            </p>
+            <pre className="text-xs text-left rounded-xl p-3 overflow-auto max-h-32" style={{ backgroundColor: 'var(--panel-bg, #f1f5f9)', color: 'var(--text-sub, #334155)', border: '1px solid var(--border-color, #cbd5e1)' }}>
+              {this.state.error?.message}
+            </pre>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 text-white font-bold rounded-xl transition-colors" style={{ backgroundColor: 'var(--accent-color, #0284c7)' }}
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export { ErrorBoundary };
 
 export default function App({ embedded = false, apiBase } = {}) {
   const resolvedApiBase = apiBase ?? API_BASE;
@@ -17,6 +60,10 @@ export default function App({ embedded = false, apiBase } = {}) {
   const [notification, setNotification] = useState(null);
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('vocat_theme') || 'nordic');
   const [isThemeOpen, setIsThemeOpen] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginBusy, setLoginBusy] = useState(false);
 
   useEffect(() => {
     if (embedded) return; // embedded: scope theme to the vocat-shell wrapper, don't touch host <html>/<body>
@@ -41,6 +88,10 @@ export default function App({ embedded = false, apiBase } = {}) {
   const fetchRuns = async () => {
     try {
       const res = await fetch(`${resolvedApiBase}/runs`, { credentials: 'include' });
+      if (res.status === 401) {
+        setNeedsLogin(true);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         const runList = Array.isArray(data) ? data : (data.runs || []);
@@ -52,7 +103,12 @@ export default function App({ embedded = false, apiBase } = {}) {
           if (prev && runList.some((r) => r.id === prev)) {
             return prev;
           }
-          return runList.length > 0 ? runList[0].id : null;
+          // On desktop (>= 1024px), auto-select first run. On mobile, keep null so list is shown.
+          const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+          if (isDesktop && runList.length > 0) {
+            return runList[0].id;
+          }
+          return null;
         });
       }
     } catch (err) {
@@ -86,8 +142,52 @@ export default function App({ embedded = false, apiBase } = {}) {
   };
 
   useEffect(() => {
-    fetchRuns();
+    const bootstrapAuth = async () => {
+      try {
+        const res = await fetch(`${resolvedApiBase}/auth/status`, { credentials: 'include' });
+        if (!res.ok) {
+          fetchRuns();
+          return;
+        }
+        const data = await res.json();
+        if (data.authRequired && !data.authenticated) {
+          setNeedsLogin(true);
+          return;
+        }
+        setNeedsLogin(false);
+        fetchRuns();
+      } catch (err) {
+        console.error('Failed to check auth status:', err);
+        fetchRuns();
+      }
+    };
+    bootstrapAuth();
   }, []);
+
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setLoginBusy(true);
+    setLoginError('');
+    try {
+      const res = await fetch(`${resolvedApiBase}/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: loginPassword }),
+      });
+      if (!res.ok) {
+        setLoginError('Invalid password');
+        return;
+      }
+      setNeedsLogin(false);
+      setLoginPassword('');
+      await fetchRuns();
+    } catch (err) {
+      setLoginError(err.message || 'Login failed');
+    } finally {
+      setLoginBusy(false);
+    }
+  };
 
   useEffect(() => {
     // Clear previous run data immediately to prevent stale display
@@ -112,12 +212,20 @@ export default function App({ embedded = false, apiBase } = {}) {
         selectedRun.progress > 0 &&
         selectedRun.progress < 100);
     if (!isProcessing) return;
+    // Adaptive polling: faster during active OCR (1s), slower during merge/convert (3s).
+    // This cuts network traffic ~3-9x vs the old fixed 350ms while keeping UI responsive.
+    const pollInterval =
+      selectedRun.status === 'OCR_IN_PROGRESS' ? 1000 :
+      selectedRun.status === 'MERGING_CONVERTING' ? 3000 : 2000;
+    let tickCount = 0;
     const interval = setInterval(() => {
       fetchRunDetail(selectedRunId);
-      fetchRuns();
-    }, 350);
+      // Refresh the run list less frequently (every 5th tick) to reduce load
+      tickCount++;
+      if (tickCount % 5 === 0) fetchRuns();
+    }, pollInterval);
     return () => clearInterval(interval);
-  }, [selectedRunId, selectedRun?.status, selectedRun?.progress]);
+  }, [selectedRunId, selectedRun?.status]);
 
   const handleCreateRun = async (formData) => {
     try {
@@ -277,16 +385,16 @@ export default function App({ embedded = false, apiBase } = {}) {
 
         {/* Radix Light Header (hidden when embedded — the host provides the chrome) */}
         {!embedded && (
-        <header className="sticky top-0 z-40 backdrop-blur-xl border-b shadow-sm px-8 py-5" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
-          <div className="max-w-[1700px] mx-auto flex flex-wrap items-center justify-between gap-4">
+        <header className="sticky top-0 z-40 backdrop-blur-xl border-b shadow-sm px-4 sm:px-8 py-3.5 sm:py-5" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
+          <div className="max-w-[1700px] mx-auto flex flex-wrap items-center justify-between gap-3 sm:gap-4">
             
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/25 ring-2 ring-white/20">
-                <Sparkles className="w-6 h-6" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/25 ring-2 ring-white/20 shrink-0">
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-extrabold tracking-tight">Vocat Input</h1>
-                <p className="text-sm font-medium opacity-70 mt-0.5">Multi-Cloud AI Vision OCR & Bounding Box Evidence Studio</p>
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Vocat Input</h1>
+                <p className="text-xs sm:text-sm font-medium opacity-70 mt-0.5 hidden xs:block">Multi-Cloud AI Vision OCR & Bounding Box Evidence Studio</p>
               </div>
             </div>
 
@@ -379,9 +487,46 @@ export default function App({ embedded = false, apiBase } = {}) {
         )}
         <Toast.Viewport />
 
+        {needsLogin && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-sm">
+            <form
+              onSubmit={handleLoginSubmit}
+              className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white shadow-2xl p-6 space-y-4"
+            >
+              <div>
+                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Sign in</h2>
+                <p className="text-xs font-semibold text-slate-500 mt-1">
+                  This server requires the administrator password.
+                </p>
+              </div>
+              <label className="block space-y-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Password</span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
+                  autoFocus
+                />
+              </label>
+              {loginError && (
+                <p className="text-xs font-bold text-rose-600">{loginError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loginBusy || !loginPassword}
+                className="w-full rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-sm font-extrabold py-2.5 shadow-sm"
+              >
+                {loginBusy ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* Main Grid Layout */}
-        <main className="max-w-[1700px] w-full mx-auto p-8 flex-1 grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
-          <aside className="h-full">
+        <main className="max-w-[1700px] w-full mx-auto p-3.5 sm:p-6 lg:p-8 flex-1 grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 lg:gap-8">
+          <aside className={`h-full ${selectedRunId ? 'hidden lg:block' : 'block'}`}>
             <RunList
               runs={runs}
               selectedRunId={selectedRunId}
@@ -395,7 +540,7 @@ export default function App({ embedded = false, apiBase } = {}) {
             />
           </aside>
 
-          <section className="h-full">
+          <section className={`h-full ${!selectedRunId ? 'hidden lg:block' : 'block'}`}>
             <RunDetail
               run={selectedRun}
               apiBase={resolvedApiBase}
@@ -405,6 +550,10 @@ export default function App({ embedded = false, apiBase } = {}) {
               onUpdateWords={handleUpdateWords}
               onUpdateTitle={handleUpdateTitle}
               onTriggerADB={handleTriggerADB}
+              onBackToList={() => {
+                setSelectedRunId(null);
+                setSelectedRun(null);
+              }}
             />
           </section>
         </main>
