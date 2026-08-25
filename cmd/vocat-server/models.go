@@ -78,11 +78,10 @@ func getCuratedVertexModels() []ModelOption {
 		{ID: "gemini-3.7-flash", Label: "Gemini 3.7 Flash", Desc: "Next-gen Flagship Multimodal (Fast & Accurate)"},
 		{ID: "gemini-3.1-pro-preview", Label: "Gemini 3.1 Pro Preview", Desc: "Advanced Next-gen Pro Reasoning"},
 		{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Desc: "Ultra-fast Lightweight"},
-		{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput Multimodal"},
 		{ID: "claude-sonnet-4-6", Label: "Claude 4.6 Sonnet", Desc: "State-of-the-art AI Multimodal"},
 		{ID: "claude-opus-4-6", Label: "Claude 4.6 Opus", Desc: "Ultimate Reasoning & Deep Context"},
 		{ID: "claude-4-5-fable", Label: "Claude 4.5 Fable", Desc: "Creative & Nuanced Context Analysis"},
-		{ID: "claude-3-7-sonnet", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
+		{ID: "claude-sonnet-4-5", Label: "Claude 4.5 Sonnet", Desc: "High Performance Multimodal"},
 	}
 }
 
@@ -92,9 +91,6 @@ func getCuratedBedrockModels() []ModelOption {
 		{ID: "us.anthropic.claude-opus-4-6", Label: "Claude 4.6 Opus", Desc: "Ultimate Reasoning & Deep Context"},
 		{ID: "us.anthropic.claude-4-5-fable", Label: "Claude 4.5 Fable", Desc: "Creative & Nuanced Context Analysis"},
 		{ID: "us.anthropic.claude-sonnet-4-5-20250929-v1:0", Label: "Claude 4.5 Sonnet", Desc: "High Performance Multimodal"},
-		{ID: "us.anthropic.claude-3-7-sonnet-20250219-v1:0", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
-		{ID: "us.anthropic.claude-3-5-sonnet-20241022-v2:0", Label: "Claude 3.5 Sonnet v2", Desc: "High Performance Multimodal"},
-		{ID: "us.anthropic.claude-3-5-haiku-20241022-v1:0", Label: "Claude 3.5 Haiku", Desc: "Ultra-fast & Cost-Effective"},
 		{ID: "amazon.nova-pro-v1:0", Label: "Nova Pro", Desc: "Higher Accuracy Reasoning"},
 		{ID: "amazon.nova-lite-v1:0", Label: "Nova Lite", Desc: "Fast, Cost-Effective"},
 	}
@@ -107,11 +103,10 @@ func getDefaultGoogleAIStudioModels() []ModelOption {
 		{ID: "gemini-3.7-flash", Label: "Gemini 3.7 Flash", Desc: "Next-gen Flagship Multimodal (Fast & Accurate)"},
 		{ID: "gemini-3.1-pro-preview", Label: "Gemini 3.1 Pro Preview", Desc: "Advanced Next-gen Pro Reasoning"},
 		{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Desc: "Ultra-fast Lightweight"},
-		{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput Multimodal"},
 		{ID: "claude-sonnet-4-6", Label: "Claude 4.6 Sonnet", Desc: "State-of-the-art AI Multimodal"},
 		{ID: "claude-opus-4-6", Label: "Claude 4.6 Opus", Desc: "Ultimate Reasoning & Deep Context"},
 		{ID: "claude-4-5-fable", Label: "Claude 4.5 Fable", Desc: "Creative & Nuanced Context Analysis"},
-		{ID: "claude-3-7-sonnet", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
+		{ID: "claude-sonnet-4-5", Label: "Claude 4.5 Sonnet", Desc: "High Performance Multimodal"},
 	}
 }
 
@@ -184,6 +179,7 @@ func fetchDynamicGoogleAIStudioModels(ctx context.Context) []ModelOption {
 		if strings.Contains(lowerID, "embedding") || strings.Contains(lowerID, "aqa") || strings.Contains(lowerID, "imagen") ||
 			strings.Contains(lowerID, "1.5") || strings.Contains(lowerID, "1.0") || strings.Contains(lowerID, "bison") ||
 			strings.Contains(lowerID, "learnlm") || strings.Contains(lowerID, "001") || strings.Contains(lowerID, "002") ||
+			strings.Contains(lowerID, "2.0") || strings.Contains(lowerID, "customtools") ||
 			strings.Contains(lowerID, "tts") || strings.Contains(lowerID, "audio") || strings.Contains(lowerID, "clip") ||
 			strings.Contains(lowerID, "lyria") || strings.Contains(lowerID, "robotics") || strings.Contains(lowerID, "-image") {
 			continue
@@ -223,8 +219,6 @@ func fetchDynamicGoogleAIStudioModels(ctx context.Context) []ModelOption {
 		"gemini-3.1-pro":         4,
 		"gemini-3.5-flash":       5,
 		"gemini-2.5-flash-lite":  6,
-		"gemini-2.0-flash":       7,
-		"gemini-2.0-flash-lite":  8,
 	}
 
 	sort.SliceStable(results, func(i, j int) bool {
@@ -242,12 +236,12 @@ func fetchDynamicGoogleAIStudioModels(ctx context.Context) []ModelOption {
 		return results[i].ID < results[j].ID
 	})
 
-	// Also include latest Claude models (Sonnet 4.6, Opus 4.6, Fable 4.5, Sonnet 3.7) under Google AI Studio options
+	// Also include latest Claude models (Sonnet 4.6, Opus 4.6, Fable 4.5, Sonnet 4.5) under Google AI Studio options
 	results = append(results,
 		ModelOption{ID: "claude-sonnet-4-6", Label: "Claude 4.6 Sonnet", Desc: "State-of-the-art AI Multimodal"},
 		ModelOption{ID: "claude-opus-4-6", Label: "Claude 4.6 Opus", Desc: "Ultimate Reasoning & Deep Context"},
 		ModelOption{ID: "claude-4-5-fable", Label: "Claude 4.5 Fable", Desc: "Creative & Nuanced Context Analysis"},
-		ModelOption{ID: "claude-3-7-sonnet", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
+		ModelOption{ID: "claude-sonnet-4-5", Label: "Claude 4.5 Sonnet", Desc: "High Performance Multimodal"},
 	)
 
 	return results

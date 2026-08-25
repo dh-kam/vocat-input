@@ -19,10 +19,14 @@ func TestGetDynamicModels_ProvidersAndFiltering(t *testing.T) {
 		assert.NotEmpty(t, p.Models, "provider %s should have models", p.ID)
 		assert.NotEmpty(t, p.DefaultModel, "provider %s should have a default model", p.ID)
 
-		// Check that legacy 1.5 and 1.0 models are excluded
+		// Check that legacy 1.5, 1.0, and Claude 3.x models are excluded
 		for _, m := range p.Models {
 			assert.NotContains(t, m.ID, "1.5", "legacy 1.5 model %s should be excluded", m.ID)
 			assert.NotContains(t, m.ID, "1.0", "legacy 1.0 model %s should be excluded", m.ID)
+			assert.NotContains(t, m.ID, "claude-3", "Claude 3.x model %s should be excluded", m.ID)
+			assert.NotContains(t, m.ID, "claude-3-7", "Claude 3-7 model %s should be excluded", m.ID)
+			assert.NotContains(t, m.ID, "claude-3-5", "Claude 3-5 model %s should be excluded", m.ID)
+			assert.NotContains(t, m.ID, "anthropic.claude-3", "Claude 3.x model %s should be excluded", m.ID)
 			assert.NotContains(t, m.ID, "embedding", "embedding model %s should be excluded", m.ID)
 			assert.NotContains(t, m.ID, "tts", "tts model %s should be excluded", m.ID)
 		}
