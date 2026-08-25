@@ -125,7 +125,22 @@ func runProcess(ctx context.Context, opts ProcessOptions) error {
 	}
 
 	sort.Strings(imagePaths)
-	fmt.Printf("\033[1;36m[vocat-cli]\033[0m Processing %d images from %s using provider '\033[1;33m%s\033[0m'...\n", len(imagePaths), opts.Dir, opts.Provider)
+	fmt.Printf("\033[1;36m[vocat-cli]\033[0m Preprocessing & checking orientation on %d images from %s...\n", len(imagePaths), opts.Dir)
+	for i, imgPath := range imagePaths {
+		res, err := engine.PreprocessImage(ctx, imgPath, true)
+		if err != nil {
+			fmt.Printf("  \033[33m[%d/%d]\033[0m ⚠️ Preprocessing warning on %s: %v\n", i+1, len(imagePaths), filepath.Base(imgPath), err)
+			continue
+		}
+		if res.RotationAngle != 0 {
+			fmt.Printf("  \033[35m[%d/%d]\033[0m 🔄 Auto-rotated %s by %d° clockwise\n", i+1, len(imagePaths), filepath.Base(imgPath), res.RotationAngle)
+		}
+		if res.OriginalWidth != res.NewWidth || res.OriginalHeight != res.NewHeight {
+			fmt.Printf("  \033[36m[%d/%d]\033[0m 📐 Normalized %s (%dx%d -> %dx%d)\n", i+1, len(imagePaths), filepath.Base(imgPath), res.OriginalWidth, res.OriginalHeight, res.NewWidth, res.NewHeight)
+		}
+	}
+
+	fmt.Printf("\033[1;36m[vocat-cli]\033[0m Processing OCR using provider '\033[1;33m%s\033[0m'...\n", opts.Provider)
 
 	registry := engine.NewProviderRegistry()
 	provider, err := registry.Get(opts.Provider)

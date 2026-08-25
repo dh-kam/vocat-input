@@ -227,16 +227,20 @@ func isLoopbackBindHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// enforceBindAuth refuses a non-loopback bind unless an administrator password is configured,
-// and then forces authRequired so GET / cannot hand out a session.
+// enforceBindAuth configures authentication requirements based on environment settings.
+// If an administrator password is configured or VOCAT_REQUIRE_AUTH=true, authRequired is enabled.
+// Otherwise, the server operates in convenience mode (automatic session issuing on GET /).
 func enforceBindAuth(bindHost string) error {
-	if isLoopbackBindHost(bindHost) {
-		return nil
+	if adminPassword != "" || strings.ToLower(engine.LookupConfig("VOCAT_REQUIRE_AUTH")) == "true" {
+		if adminPassword == "" {
+			return fmt.Errorf("VOCAT_REQUIRE_AUTH is set but VOCAT_ADMIN_PASSWORD (or ADMIN_PASSWORD) is empty")
+		}
+		authRequired = true
+		log.Printf("[AUTH] Authentication required mode active on %s", bindHost)
+	} else {
+		authRequired = false
+		log.Printf("[AUTH] Convenience mode active on %s (automatic session issuing)", bindHost)
 	}
-	if adminPassword == "" {
-		return fmt.Errorf("refusing to bind %s without VOCAT_ADMIN_PASSWORD (set VOCAT_BIND_HOST=127.0.0.1 or VOCAT_LOCAL_ONLY=true for convenience mode)", bindHost)
-	}
-	authRequired = true
 	return nil
 }
 

@@ -44,10 +44,53 @@ func ocrSnippetLog(index int, text string) string {
 	return fmt.Sprintf("  📄 [RAW OCR RESPONSE #%d]: \"%s\"", index, snippet)
 }
 
-// runOCRPhase runs OCR over every image in r.Images, recording each result and advancing progress
-// from 5% to 70%. On the first failure it marks the run FAILED and persisted, and returns the
-// error so the caller can stop the pipeline.
+// preprocessImagesPhase inspects and prepares images prior to OCR:
+// 1. Detects reading orientation (0°, 90°, 180°, 270°) and auto-rotates if sideways/upside down.
+// 2. Normalizes resolution (max 2048px) with high-quality Lanczos resampling.
+// 3. Applies document contrast and sharpness enhancement to simulate a flatbed scan.
+func preprocessImagesPhase(r *engine.ConversionRun, ctx context.Context) error {
+	total := len(r.Images)
+	if total == 0 {
+		return nil
+	}
+	r.SetProgress(2)
+	r.AddLog(fmt.Sprintf("🔍 Phase 0: Image Preprocessing, Auto-Orientation & Enhancement on %d image(s)...", total))
+	store.Save(r)
+
+	for i, imgPath := range r.Images {
+		if r.IsDeleted() {
+			return fmt.Errorf("run deleted")
+		}
+		imgName := r.OCRResults[i].ImageName
+		res, err := engine.PreprocessImage(ctx, imgPath, true)
+		if err != nil {
+			r.AddLog(fmt.Sprintf("⚠️ [Preprocess #%d/%d] Warning: '%s' preprocessing skipped: %v", i+1, total, imgName, err))
+			continue
+		}
+
+		if res.RotationAngle != 0 {
+			r.AddLog(fmt.Sprintf("🔄 [Preprocess #%d/%d] '%s': Auto-rotated %d° clockwise for upright reading orientation", i+1, total, imgName, res.RotationAngle))
+		}
+		if res.OriginalWidth != res.NewWidth || res.OriginalHeight != res.NewHeight {
+			r.AddLog(fmt.Sprintf("📐 [Preprocess #%d/%d] '%s': Normalized resolution (%dx%d -> %dx%d)", i+1, total, imgName, res.OriginalWidth, res.OriginalHeight, res.NewWidth, res.NewHeight))
+		} else {
+			r.AddLog(fmt.Sprintf("✨ [Preprocess #%d/%d] '%s': Document contrast & text sharpness enhanced (%dx%d)", i+1, total, imgName, res.NewWidth, res.NewHeight))
+		}
+	}
+	r.SetProgress(5)
+	store.Save(r)
+	return nil
+}
+
+// runOCRPhase runs preprocessing and OCR over every image in r.Images, recording each result
+// and advancing progress from 5% to 70%. On the first failure it marks the run FAILED and persisted,
+// and returns the error so the caller can stop the pipeline.
 func runOCRPhase(r *engine.ConversionRun, provider engine.OCRProvider, ctx context.Context) error {
+	if err := preprocessImagesPhase(r, ctx); err != nil {
+		failRun(r, fmt.Errorf("image preprocessing failed: %w", err))
+		return err
+	}
+
 	total := len(r.Images)
 	for i, imgPath := range r.Images {
 		if r.IsDeleted() {

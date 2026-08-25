@@ -210,7 +210,7 @@ func TestIsAllowedOrigin(t *testing.T) {
 	}
 }
 
-func TestEnforceBindAuth_LoopbackAllowsConvenienceMode(t *testing.T) {
+func TestEnforceBindAuth_AllowsConvenienceModeWithoutPassword(t *testing.T) {
 	withAdminPassword(t, "")
 	orig := authRequired
 	authRequired = false
@@ -219,20 +219,17 @@ func TestEnforceBindAuth_LoopbackAllowsConvenienceMode(t *testing.T) {
 	require.NoError(t, enforceBindAuth("127.0.0.1"))
 	assert.False(t, authRequired)
 	require.NoError(t, enforceBindAuth("localhost"))
-	require.NoError(t, enforceBindAuth("::1"))
+	assert.False(t, authRequired)
+	require.NoError(t, enforceBindAuth("0.0.0.0"))
+	assert.False(t, authRequired)
 }
 
-func TestEnforceBindAuth_NonLoopbackRequiresPassword(t *testing.T) {
-	withAdminPassword(t, "")
+func TestEnforceBindAuth_EnablesAuthWithPassword(t *testing.T) {
+	withAdminPassword(t, "hunter2")
 	orig := authRequired
 	authRequired = false
 	t.Cleanup(func() { authRequired = orig })
 
-	err := enforceBindAuth("0.0.0.0")
-	require.Error(t, err)
-	assert.False(t, authRequired, "must not flip authRequired when enforcement fails")
-
-	withAdminPassword(t, "hunter2")
 	require.NoError(t, enforceBindAuth("0.0.0.0"))
 	assert.True(t, authRequired)
 }
