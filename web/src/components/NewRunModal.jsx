@@ -4,6 +4,20 @@ import { X, Upload, Sparkles, Check, Trash2, Zap } from 'lucide-react';
 
 const FALLBACK_PROVIDERS = [
   {
+    id: 'google-ai-studio',
+    label: 'Google AI Studio',
+    desc: 'Google AI Studio Gemini API (Direct Key)',
+    defaultModel: 'gemini-2.5-flash',
+    models: [
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal (Recommended)', default: true },
+      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & High Accuracy' },
+      { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Ultra-fast Lightweight' },
+      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'High Throughput Multimodal' },
+      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Legacy Pro Model' },
+      { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Lightweight & Fast' },
+    ],
+  },
+  {
     id: 'vertex',
     label: 'GCP Vertex',
     desc: 'Google Cloud Vertex AI (Gemini 2.5)',

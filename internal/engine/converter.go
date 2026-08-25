@@ -142,7 +142,20 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 	}
 
 	// Stage 2: Extract structured JSON using selected Provider & Model.
-	if ocrProvider == "bedrock" {
+	prov := strings.ToLower(strings.TrimSpace(ocrProvider))
+	if prov == "google-ai-studio" || prov == "google_ai_studio" || prov == "ai-studio" || prov == "gemini" {
+		fmt.Printf("[AI Structuring Stage 2] Calling Google AI Studio Gemini Model '%s'...\n", ocrModel)
+		res, err := callGoogleAIStudioForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
+		if err == nil && res != nil {
+			if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
+				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Google AI Studio '%s' (Title: '%s')\n", len(cleaned.Words), ocrModel, cleaned.Title)
+				return cleaned, nil
+			}
+		}
+		fmt.Printf("[AI Structuring Warning] Google AI Studio Model '%s' call failed or empty (%v). Trying Vertex fallback...\n", ocrModel, err)
+	}
+
+	if prov == "bedrock" {
 		fmt.Printf("[AI Structuring Stage 2] Calling AWS Bedrock Model '%s'...\n", ocrModel)
 		res, err := callBedrockForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
 		if err == nil && res != nil {
@@ -605,6 +618,166 @@ Text:
 
 	if len(resStruct.Candidates) == 0 || len(resStruct.Candidates[0].Content.Parts) == 0 {
 		return nil, fmt.Errorf("empty text response from Vertex AI")
+	}
+
+	responseText := strings.TrimSpace(resStruct.Candidates[0].Content.Parts[0].Text)
+	return parseStructuredJSONResponse(responseText)
+}
+
+func callGoogleAIStudioForJSON(ctx context.Context, modelName string, text string, formatInstructions string, imagePaths []string) (*StructuringResult, error) {
+	apiKey := getGoogleAIStudioAuth()
+	if apiKey == "" {
+		return nil, fmt.Errorf("no API key available for Google AI Studio (set GOOGLE_AI_STUDIO_API_KEY or GEMINI_API_KEY in .env)")
+	}
+
+	realWidth, realHeight := 1000, 1000
+	if len(imagePaths) > 0 {
+		rw, rh := getImageDimensions(imagePaths[0])
+		if rw > 0 && rh > 0 {
+			realWidth, realHeight = rw, rh
+		}
+	}
+
+	var prompt string
+	if formatInstructions != "" {
+		prompt = fmt.Sprintf(`You are a Korean-English vocabulary extraction AI.
+
+TASK: Extract English headwords from the OCR text below and output a JSON array.
+Each JSON object = ONE unique English headword with its Korean meaning.
+I am also providing the source images — use them to determine accurate bounding boxes for each word and identify the textbook title from headers.
+
+=== FORMAT-SPECIFIC EXTRACTION INSTRUCTIONS (from image analysis) ===
+%s
+
+=== STRICT HEADWORD EXCLUSION RULES ===
+1. ONLY MAIN HEADWORDS: Extract ONLY single primary headword entries (usually having an item number like 51, 52, 53).
+2. NEVER EXTRACT EXAMPLE PHRASES/COLLOCATIONS: Expressions like "germ killer", "stage setting", "medical clinic", "pedestrian speech", "voucher for a free meal", "award a scholarship", "elevated road" are example phrases, NOT main headwords. DO NOT create separate entries for them!
+3. NEVER EXTRACT DERIVED WORDS/ANNOTATIONS AS ENTRIES: Secondary notes under a main entry (e.g. "differ (v)", "delivery (n)", "effectively (adv)", "= consider", "≠ ineffective") MUST NOT become separate entries.
+4. NEVER EXTRACT SENTENCES OR KOREAN TRANSLATIONS: Skip all example sentences and their Korean translations.
+
+=== STRICT EXACT TEXT & MULTIPLE MEANINGS PRESERVATION RULE (CRITICAL) ===
+- EXTRACT ALL PRINTED KOREAN MEANINGS: If an entry has multiple Korean meanings separated by commas or spaces (e.g., "신기하게, 신비하게"), you MUST extract ALL meanings in full, separated by commas. DO NOT omit or drop any secondary definition! (e.g., output "신기하게, 신비하게", NEVER truncate to just "신비하게"!).
+- MULTIMODAL IMAGE CROSS-CHECK & OCR CORRECTION: The text transcript may contain OCR reading errors or typos. ALWAYS look closely at the provided SOURCE IMAGES to verify the exact printed Korean definition! If the OCR text says one thing (e.g. "의심하다") but the SOURCE IMAGE clearly shows a different printed Korean word (e.g. "짐작하다"), ALWAYS prioritize and extract the EXACT printed Korean word visible in the SOURCE IMAGE!
+- NO SYNONYM REPLACEMENT / NO PARAPHRASTING: DO NOT replace or substitute Korean meanings with similar or general synonyms (e.g., if the image says "조산사", you MUST output "조산사". DO NOT arbitrarily change it to "산부인과 의사" or any other synonym!).
+- KEEP ORIGINAL TRANSLATIONS EXACTLY AS-IS: Preserve the original printed Korean definitions without altering, paraphrasing, or replacing them with your internal knowledge.
+
+=== MATERIAL TITLE EXTRACTION RULE ===
+- Inspect the top header area of the page/images for the textbook name, day/unit number, chapter name, or test title (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01", "워드마스터 수능 2000 Day 15", "EBS 수능특강 영어 Day 03").
+- Combine the book title, unit/day, and test type into a clean, concise title string in the root "title" property.
+- If no clear header title is found, set "title" to an empty string ("").
+
+=== OUTPUT FORMAT & REAL SOURCE IMAGE RESOLUTION ===
+The source image actual physical resolution is %dx%d pixels.
+Output a JSON object containing:
+- "title" (string): Overall textbook name and unit/day (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01").
+- "imageWidth" (integer): Actual source image width (%d).
+- "imageHeight" (integer): Actual source image height (%d).
+- "words": Array of JSON objects, where each object contains:
+  * "no" (integer): Original sequence number from OCR. Auto-increment from 1 if missing.
+  * "word" (string): Clean English headword. Remove trailing punctuation.
+  * "pos" (string): Korean POS abbreviation: "명"/"동"/"형"/"부"/"전"/"접". Infer from context. DO NOT default all to "명".
+  * "meaning" (string): EXACT Korean meaning(s) ONLY from source image, comma-separated. DO NOT replace with synonyms. NO English text.
+  * "bbox" (array of 4 integers): [ymin, xmin, ymax, xmax] relative to physical image resolution (%dx%d) or percentage 0-1000 scale. Look at actual source images.
+  * "imageWidth" (integer): Actual image width (%d).
+  * "imageHeight" (integer): Actual image height (%d).
+  * "imageIndex" (integer): 1-based index indicating which image the word appears in.
+
+=== IMAGE RESOLUTION & ASPECT RATIO SPECIFICATION ===
+- Physical Image Dimensions: %dx%d pixels (Width x Height).
+- Aspect Ratio: %.3f (Width / Height).
+- CRITICAL ASPECT CORRECTION: This image is NOT square (%dx%d). Measure ymin and ymax strictly based on the un-stretched physical image canvas top. DO NOT push Y-coordinates further down as you go down the page!
+
+=== DYNAMIC VISUAL ENTRY BLOCK BOUNDING BOX (BBOX) RULES ===
+1. ABSOLUTE ZERO HARDCODING: Do NOT guess or use static preset numbers. You MUST dynamically inspect the actual image visual content for each image.
+2. ENTIRE ENTRY BLOCK BOXING: The "bbox" array [ymin, xmin, ymax, xmax] (scaled 0-1000) MUST frame the FULL ENTRY BLOCK for each headword from its top English word line down to the bottom of its example sentence / definition block.
+3. FULL ROW HEIGHT COVERAGE: Each vocabulary entry block naturally occupies approximately 120-150 units (12-15%%) of vertical height.
+4. LAST ENTRY YMIN BOUNDARY: The 5th (last) entry on standard vocabulary pages starts around ymin 750-800 and ends by ymax 880-920. NEVER set ymin above 900 (90%%) for the last entry block, because ymin > 900 is reserved for page footers/numbers!
+
+OCR Transcriptions:
+%s`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, float64(realWidth)/float64(realHeight), realWidth, realHeight, text)
+	} else {
+		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (textbook/unit title from header if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers relative to %dx%d), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
+
+Text:
+%s`, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, text)
+	}
+
+	var parts []map[string]interface{}
+	for _, imgPath := range imagePaths {
+		imgData, err := os.ReadFile(imgPath)
+		if err != nil {
+			fmt.Printf("[WARN] Stage 2: skip image %s: %v\n", imgPath, err)
+			continue
+		}
+		mimeType := "image/jpeg"
+		if strings.ToLower(filepath.Ext(imgPath)) == ".png" {
+			mimeType = "image/png"
+		}
+		parts = append(parts, map[string]interface{}{
+			"inline_data": map[string]interface{}{
+				"mime_type": mimeType,
+				"data":      encodeBase64(imgData),
+			},
+		})
+	}
+	parts = append(parts, map[string]interface{}{"text": prompt})
+
+	payload := map[string]interface{}{
+		"contents": []map[string]interface{}{
+			{
+				"role": "user",
+				"parts": parts,
+			},
+		},
+		"generationConfig": map[string]interface{}{
+			"response_mime_type": "application/json",
+			"temperature":        0.1,
+		},
+	}
+
+	jsonPayload, _ := json.Marshal(payload)
+	if modelName == "" {
+		modelName = LookupConfig("GEMINI_MODEL", "GOOGLE_AI_STUDIO_MODEL")
+	}
+	if modelName == "" || strings.Contains(strings.ToLower(modelName), "claude") {
+		modelName = "gemini-2.5-flash"
+	}
+
+	endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", modelName, apiKey)
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-goog-api-key", apiKey)
+
+	resp, err := defaultHTTPClient.Do(req)
+	if err != nil {
+		return nil, RedactedError("Google AI Studio API request failed: %s", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Google AI Studio API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var resStruct struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+	}
+
+	if err := json.Unmarshal(body, &resStruct); err != nil {
+		return nil, fmt.Errorf("unmarshal Google AI Studio response: %w", err)
+	}
+
+	if len(resStruct.Candidates) == 0 || len(resStruct.Candidates[0].Content.Parts) == 0 {
+		return nil, fmt.Errorf("empty text response from Google AI Studio")
 	}
 
 	responseText := strings.TrimSpace(resStruct.Candidates[0].Content.Parts[0].Text)

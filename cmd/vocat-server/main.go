@@ -1153,6 +1153,20 @@ type ProviderOption struct {
 func handleGetModels(c *gin.Context) {
 	providers := []ProviderOption{
 		{
+			ID:           "google-ai-studio",
+			Label:        "Google AI Studio",
+			Desc:         "Google AI Studio Gemini API (Direct Key)",
+			DefaultModel: "gemini-2.5-flash",
+			Models: []ModelOption{
+				{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Desc: "Fast, Multimodal (Recommended)", Default: true},
+				{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Desc: "Deep Reasoning & High Accuracy"},
+				{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Desc: "Ultra-fast Lightweight"},
+				{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput Multimodal"},
+				{ID: "gemini-1.5-pro", Label: "Gemini 1.5 Pro", Desc: "Legacy Pro Model"},
+				{ID: "gemini-1.5-flash", Label: "Gemini 1.5 Flash", Desc: "Lightweight & Fast"},
+			},
+		},
+		{
 			ID:           "vertex",
 			Label:        "GCP Vertex",
 			Desc:         "Google Cloud Vertex AI (Gemini 2.5)",

@@ -66,9 +66,12 @@ func NewProviderRegistry() *ProviderRegistry {
 		EngineB: bedrockProvider, // 2nd OCR: AWS Bedrock (BEDROCK_MODEL, else the Nova candidates)
 	}
 
+	googleAIStudioProvider := &GoogleAIStudioOCRProvider{}
+
 	r.Register(dummyProvider)
 	r.Register(vertexProvider)
 	r.Register(geminiProvider)
+	r.Register(googleAIStudioProvider)
 	r.Register(anthropicProvider)
 	r.Register(gcpProvider)
 	r.Register(bedrockProvider)
@@ -103,6 +106,10 @@ func (r *ProviderRegistry) Get(name string) (OCRProvider, error) {
 	}
 
 	key := strings.ToLower(strings.TrimSpace(name))
+	switch key {
+	case "ai-studio", "google_ai_studio":
+		key = "google-ai-studio"
+	}
 	p, ok := r.providers[key]
 	if !ok {
 		return nil, fmt.Errorf("unknown OCR provider %q; available: %s", name, strings.Join(r.Names(), ", "))
@@ -399,17 +406,123 @@ CRITICAL RULES FOR TRANSCRIPTION:
 	return "", fmt.Errorf("empty response from Vertex AI API")
 }
 
+// getGoogleAIStudioAuth resolves the API key for Google AI Studio / Gemini Developer API.
+func getGoogleAIStudioAuth() string {
+	return LookupConfig("GOOGLE_AI_STUDIO_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "VERTEX_API_KEY", "VERTEX_AI_API_KEY")
+}
+
 // ----------------------------------------------------
-// 1. Google AI Studio (Gemini Vision) OCR Provider
+// 1. Google AI Studio (Gemini Developer API) OCR Provider
+// ----------------------------------------------------
+type GoogleAIStudioOCRProvider struct{}
+
+func (g *GoogleAIStudioOCRProvider) Name() string { return "google-ai-studio" }
+
+func (g *GoogleAIStudioOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
+	apiKey := getGoogleAIStudioAuth()
+	if apiKey == "" {
+		return "", fmt.Errorf("Google AI Studio requires an API key (set GOOGLE_AI_STUDIO_API_KEY or GEMINI_API_KEY in .env)")
+	}
+
+	imgBytes, err := os.ReadFile(imagePath)
+	if err != nil {
+		return "", fmt.Errorf("read image file: %w", err)
+	}
+
+	mimeType := "image/jpeg"
+	ext := strings.ToLower(filepath.Ext(imagePath))
+	if ext == ".png" {
+		mimeType = "image/png"
+	} else if ext == ".webp" {
+		mimeType = "image/webp"
+	}
+
+	base64Data := base64.StdEncoding.EncodeToString(imgBytes)
+
+	payload := map[string]interface{}{
+		"contents": []map[string]interface{}{
+			{
+				"role": "user",
+				"parts": []map[string]interface{}{
+					{
+						"inline_data": map[string]string{
+							"mime_type": mimeType,
+							"data":      base64Data,
+						},
+					},
+					{
+						"text": `Transcribe all text from this image line by line with absolute accuracy.
+
+CRITICAL RULES FOR TRANSCRIPTION:
+1. NO CONVERSATIONAL PREAMBLES: NEVER include lines like "Here is the transcription...", "Here are the words...", or any introductory/closing conversational text.
+2. NO MARKDOWN DECORATIONS: Do NOT add markdown bold (**word**), bullet points (*), or italics. Transcribe plain text only.
+3. PRESERVE ALL ITEM NUMBERS: Keep all row numbers (e.g. 51, 52, 53, 76, 77) exactly as written at the start of lines.
+4. EXACT TEXT ONLY: Transcribe the exact text visible on the page line by line.`,
+					},
+				},
+			},
+		},
+	}
+
+	jsonPayload, _ := json.Marshal(payload)
+	modelName := GetOCRModel(ctx)
+	if modelName == "" {
+		modelName = LookupConfig("GEMINI_MODEL", "GOOGLE_AI_STUDIO_MODEL")
+	}
+	if modelName == "" || strings.Contains(strings.ToLower(modelName), "claude") {
+		modelName = "gemini-2.5-flash"
+	}
+
+	endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", modelName, apiKey)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-goog-api-key", apiKey)
+
+	resp, err := defaultHTTPClient.Do(req)
+	if err != nil {
+		return "", RedactedError("Google AI Studio API request failed: %s", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Google AI Studio API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var resStruct struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+	}
+
+	if err := json.Unmarshal(body, &resStruct); err != nil {
+		return "", fmt.Errorf("unmarshal Google AI Studio response: %w", err)
+	}
+
+	if len(resStruct.Candidates) > 0 && len(resStruct.Candidates[0].Content.Parts) > 0 {
+		return resStruct.Candidates[0].Content.Parts[0].Text, nil
+	}
+	return "", fmt.Errorf("empty response from Google AI Studio API")
+}
+
+// ----------------------------------------------------
+// 1. Google AI Studio (Gemini Vision) Legacy Alias OCR Provider
 // ----------------------------------------------------
 type GeminiOCRProvider struct{}
 
 func (g *GeminiOCRProvider) Name() string { return "gemini" }
 
 func (g *GeminiOCRProvider) ProcessImage(ctx context.Context, imagePath string) (string, error) {
-	// GeminiOCRProvider uses the exact same unified Google credentials flow
-	v := &VertexAIOCRProvider{}
-	return v.ProcessImage(ctx, imagePath)
+	p := &GoogleAIStudioOCRProvider{}
+	return p.ProcessImage(ctx, imagePath)
 }
 
 // ----------------------------------------------------
