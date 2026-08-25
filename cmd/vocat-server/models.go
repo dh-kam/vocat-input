@@ -77,6 +77,10 @@ func getCuratedVertexModels() []ModelOption {
 		{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Desc: "Deep Reasoning & Highest OCR Accuracy"},
 		{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Desc: "Ultra-fast Lightweight"},
 		{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput Multimodal"},
+		{ID: "claude-3-7-sonnet", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision (Vertex Model Garden)"},
+		{ID: "claude-3-5-sonnet", Label: "Claude 3.5 Sonnet v2", Desc: "High Performance Multimodal (Vertex Model Garden)"},
+		{ID: "claude-3-opus", Label: "Claude 3 Opus", Desc: "Deep Knowledge & Complex Analysis (Vertex Model Garden)"},
+		{ID: "claude-3-5-haiku", Label: "Claude 3.5 Haiku", Desc: "Ultra-fast & Cost-Effective"},
 	}
 }
 
@@ -85,6 +89,8 @@ func getCuratedBedrockModels() []ModelOption {
 		{ID: "us.anthropic.claude-sonnet-4-6", Label: "Claude 4.6 Sonnet", Desc: "State-of-the-art AI (Recommended)", Default: true},
 		{ID: "us.anthropic.claude-3-7-sonnet-20250219-v1:0", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
 		{ID: "us.anthropic.claude-3-5-sonnet-20241022-v2:0", Label: "Claude 3.5 Sonnet v2", Desc: "High Performance Multimodal"},
+		{ID: "us.anthropic.claude-3-opus-20240229-v1:0", Label: "Claude 3 Opus", Desc: "Deep Knowledge & Complex Analysis"},
+		{ID: "us.anthropic.claude-3-5-haiku-20241022-v1:0", Label: "Claude 3.5 Haiku", Desc: "Ultra-fast & Cost-Effective"},
 		{ID: "amazon.nova-pro-v1:0", Label: "Nova Pro", Desc: "Higher Accuracy Reasoning"},
 		{ID: "amazon.nova-lite-v1:0", Label: "Nova Lite", Desc: "Fast, Cost-Effective"},
 	}
@@ -94,8 +100,13 @@ func getDefaultGoogleAIStudioModels() []ModelOption {
 	return []ModelOption{
 		{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Desc: "Fast, Multimodal & Balanced (Recommended)", Default: true},
 		{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Desc: "Deep Reasoning & Highest Accuracy"},
+		{ID: "gemini-3.7-flash", Label: "Gemini 3.7 Flash", Desc: "Next-gen Flagship Multimodal (Fast & Accurate)"},
+		{ID: "gemini-3.1-pro-preview", Label: "Gemini 3.1 Pro Preview", Desc: "Advanced Next-gen Pro Reasoning"},
 		{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Desc: "Ultra-fast Lightweight"},
 		{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash", Desc: "High Throughput Multimodal"},
+		{ID: "claude-3-7-sonnet", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
+		{ID: "claude-3-5-sonnet", Label: "Claude 3.5 Sonnet v2", Desc: "High Performance Multimodal"},
+		{ID: "claude-3-opus", Label: "Claude 3 Opus", Desc: "Deep Knowledge & Complex Analysis"},
 	}
 }
 
@@ -200,11 +211,15 @@ func fetchDynamicGoogleAIStudioModels(ctx context.Context) []ModelOption {
 
 	// Sort models with priority order
 	modelPriority := map[string]int{
-		"gemini-2.5-flash":      1,
-		"gemini-2.5-pro":        2,
-		"gemini-2.5-flash-lite": 3,
-		"gemini-2.0-flash":      4,
-		"gemini-2.0-flash-lite": 5,
+		"gemini-2.5-flash":       1,
+		"gemini-2.5-pro":         2,
+		"gemini-3.7-flash":       3,
+		"gemini-3.1-pro-preview": 4,
+		"gemini-3.1-pro":         4,
+		"gemini-3.5-flash":       5,
+		"gemini-2.5-flash-lite":  6,
+		"gemini-2.0-flash":       7,
+		"gemini-2.0-flash-lite":  8,
 	}
 
 	sort.SliceStable(results, func(i, j int) bool {
@@ -221,6 +236,13 @@ func fetchDynamicGoogleAIStudioModels(ctx context.Context) []ModelOption {
 		}
 		return results[i].ID < results[j].ID
 	})
+
+	// Also include Claude models (Sonnet, Opus) under Google AI Studio options
+	results = append(results,
+		ModelOption{ID: "claude-3-7-sonnet", Label: "Claude 3.7 Sonnet", Desc: "Hybrid Reasoning & Vision"},
+		ModelOption{ID: "claude-3-5-sonnet", Label: "Claude 3.5 Sonnet v2", Desc: "High Performance Multimodal"},
+		ModelOption{ID: "claude-3-opus", Label: "Claude 3 Opus", Desc: "Deep Knowledge & Complex Analysis"},
+	)
 
 	return results
 }

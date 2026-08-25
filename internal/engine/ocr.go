@@ -350,14 +350,20 @@ CRITICAL RULES FOR TRANSCRIPTION:
 		},
 	}
 
-	jsonPayload, _ := json.Marshal(payload)
 	modelName := GetOCRModel(ctx)
 	if modelName == "" {
 		modelName = LookupConfig("VERTEX_MODEL")
 	}
-	if modelName == "" || strings.Contains(strings.ToLower(modelName), "claude") {
+	mLower := strings.ToLower(modelName)
+	if strings.Contains(mLower, "claude") || strings.Contains(mLower, "opus") || strings.Contains(mLower, "sonnet") || strings.Contains(mLower, "haiku") {
+		b := &BedrockOCRProvider{}
+		return b.ProcessImage(ctx, imagePath)
+	}
+	if modelName == "" {
 		modelName = "gemini-2.5-flash"
 	}
+
+	jsonPayload, _ := json.Marshal(payload)
 
 	var endpoint string
 	if isAPIKey {
@@ -464,14 +470,20 @@ CRITICAL RULES FOR TRANSCRIPTION:
 		},
 	}
 
-	jsonPayload, _ := json.Marshal(payload)
 	modelName := GetOCRModel(ctx)
 	if modelName == "" {
 		modelName = LookupConfig("GEMINI_MODEL", "GOOGLE_AI_STUDIO_MODEL")
 	}
-	if modelName == "" || strings.Contains(strings.ToLower(modelName), "claude") {
+	mLower := strings.ToLower(modelName)
+	if strings.Contains(mLower, "claude") || strings.Contains(mLower, "opus") || strings.Contains(mLower, "sonnet") || strings.Contains(mLower, "haiku") {
+		b := &BedrockOCRProvider{}
+		return b.ProcessImage(ctx, imagePath)
+	}
+	if modelName == "" {
 		modelName = "gemini-2.5-flash"
 	}
+
+	jsonPayload, _ := json.Marshal(payload)
 
 	endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", modelName, apiKey)
 

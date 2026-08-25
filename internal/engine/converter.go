@@ -143,6 +143,34 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 
 	// Stage 2: Extract structured JSON using selected Provider & Model.
 	prov := strings.ToLower(strings.TrimSpace(ocrProvider))
+	modelLower := strings.ToLower(strings.TrimSpace(ocrModel))
+	isClaudeModel := strings.Contains(modelLower, "claude") ||
+		strings.Contains(modelLower, "opus") ||
+		strings.Contains(modelLower, "sonnet") ||
+		strings.Contains(modelLower, "haiku")
+
+	// If a Claude/Opus/Sonnet model was requested (under any provider), route to Bedrock/Anthropic
+	if isClaudeModel {
+		bedrockModelID := resolveClaudeBedrockModelID(ocrModel)
+		fmt.Printf("[AI Structuring Stage 2] Claude/Opus/Sonnet Model '%s' requested (resolved to '%s'). Calling Bedrock/Anthropic...\n", ocrModel, bedrockModelID)
+		res, err := callBedrockForJSON(ctx, bedrockModelID, mergedText, formatInstructions, imagePaths)
+		if err == nil && res != nil {
+			if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
+				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Claude '%s' (Title: '%s')\n", len(cleaned.Words), ocrModel, cleaned.Title)
+				return cleaned, nil
+			}
+		}
+		if apiKey := LookupConfig("ANTHROPIC_API_KEY"); apiKey != "" {
+			res, err := callClaudeForJSON(ctx, apiKey, mergedText)
+			if err == nil && res != nil {
+				if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
+					return cleaned, nil
+				}
+			}
+		}
+		fmt.Printf("[AI Structuring Warning] Claude/Bedrock Model '%s' call failed (%v). Trying Google AI Studio/Vertex fallback...\n", ocrModel, err)
+	}
+
 	if prov == "google-ai-studio" || prov == "google_ai_studio" || prov == "ai-studio" || prov == "gemini" {
 		fmt.Printf("[AI Structuring Stage 2] Calling Google AI Studio Gemini Model '%s'...\n", ocrModel)
 		res, err := callGoogleAIStudioForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
@@ -169,15 +197,6 @@ func ConvertOCRToVocatJSON(ctx context.Context, mergedText string, preserveOrder
 
 	// Default / Vertex AI Engine
 	fmt.Printf("[AI Structuring Stage 2] Calling GCP Vertex AI Model '%s'...\n", ocrModel)
-	if strings.Contains(ocrModel, "claude") {
-		res, err := callBedrockForJSON(ctx, "us.anthropic.claude-sonnet-4-6", mergedText, formatInstructions, imagePaths)
-		if err == nil && res != nil {
-			if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
-				fmt.Printf("[AI Structuring Stage 2 Success] Extracted %d structured words with Vertex/Anthropic '%s' (Title: '%s')\n", len(cleaned.Words), ocrModel, cleaned.Title)
-				return cleaned, nil
-			}
-		}
-	}
 	res, err := callVertexForJSON(ctx, ocrModel, mergedText, formatInstructions, imagePaths)
 	if err == nil && res != nil {
 		if cleaned := cleanStructuringResult(res, imagePaths); len(cleaned.Words) > 0 {
@@ -788,15 +807,33 @@ func getBedrockBearerToken() string {
 	return LookupConfig("AWS_BEARER_TOKEN_BEDROCK")
 }
 
+func resolveClaudeBedrockModelID(model string) string {
+	m := strings.ToLower(strings.TrimSpace(model))
+	switch {
+	case strings.Contains(m, "opus"):
+		return "us.anthropic.claude-3-opus-20240229-v1:0"
+	case strings.Contains(m, "3-7") || strings.Contains(m, "3.7"):
+		return "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+	case strings.Contains(m, "3-5-sonnet") || strings.Contains(m, "3.5-sonnet") || (strings.Contains(m, "sonnet") && !strings.Contains(m, "4-6") && !strings.Contains(m, "4.6")):
+		return "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+	case strings.Contains(m, "haiku"):
+		return "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+	case strings.Contains(m, "4-6") || strings.Contains(m, "4.6"):
+		return "us.anthropic.claude-sonnet-4-6"
+	case strings.HasPrefix(m, "us.anthropic.") || strings.HasPrefix(m, "anthropic.") || strings.HasPrefix(m, "amazon."):
+		return model
+	default:
+		return "us.anthropic.claude-sonnet-4-6"
+	}
+}
+
 func callBedrockForJSON(ctx context.Context, modelID string, text string, formatInstructions string, imagePaths []string) (*StructuringResult, error) {
 	bearerToken := getBedrockBearerToken()
 	if bearerToken == "" {
 		return nil, fmt.Errorf("AWS_BEARER_TOKEN_BEDROCK not set in environment or .env")
 	}
 
-	if modelID == "" {
-		modelID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-	}
+	modelID = resolveClaudeBedrockModelID(modelID)
 
 	realWidth, realHeight := 1000, 1000
 	if len(imagePaths) > 0 {
