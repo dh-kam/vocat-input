@@ -68,6 +68,8 @@ func preprocessImagesPhase(r *engine.ConversionRun, ctx context.Context) error {
 			continue
 		}
 
+		r.SetOCRResultDimensions(i, res.NewWidth, res.NewHeight)
+
 		if res.RotationAngle != 0 {
 			r.AddLog(fmt.Sprintf("🔄 [Preprocess #%d/%d] '%s': Auto-rotated %d° clockwise for upright reading orientation", i+1, total, imgName, res.RotationAngle))
 		}

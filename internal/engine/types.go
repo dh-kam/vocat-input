@@ -52,12 +52,14 @@ type StructuringResult struct {
 }
 
 type OCRResult struct {
-	ImageIndex int    `json:"imageIndex"`
-	ImageName  string `json:"imageName"`
-	ImagePath  string `json:"imagePath"`
-	RawText    string `json:"rawText"`
-	Status     string `json:"status"` // "PENDING", "PROCESSING", "COMPLETED", "FAILED"
-	Error      string `json:"error,omitempty"`
+	ImageIndex  int    `json:"imageIndex"`
+	ImageName   string `json:"imageName"`
+	ImagePath   string `json:"imagePath"`
+	ImageWidth  int    `json:"imageWidth,omitempty"`
+	ImageHeight int    `json:"imageHeight,omitempty"`
+	RawText     string `json:"rawText"`
+	Status      string `json:"status"` // "PENDING", "PROCESSING", "COMPLETED", "FAILED"
+	Error       string `json:"error,omitempty"`
 }
 
 type TransformationRule struct {
@@ -206,6 +208,15 @@ func (r *ConversionRun) SetOCRResultText(i int, text string) {
 	defer r.mu.Unlock()
 	if i >= 0 && i < len(r.OCRResults) {
 		r.OCRResults[i].RawText = text
+	}
+}
+
+func (r *ConversionRun) SetOCRResultDimensions(i int, width, height int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if i >= 0 && i < len(r.OCRResults) {
+		r.OCRResults[i].ImageWidth = width
+		r.OCRResults[i].ImageHeight = height
 	}
 }
 

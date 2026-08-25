@@ -9,6 +9,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	_ "golang.org/x/image/webp"
 	"io"
 	"math"
 	"net/http"
@@ -436,26 +437,14 @@ func attachImageMetadata(words []WordItem, imagePaths []string) []WordItem {
 	for i := range words {
 		idx := words[i].ImageIndex
 		if meta, ok := metaMap[idx]; ok {
-			if words[i].ImageWidth <= 0 {
-				words[i].ImageWidth = meta.width
-			}
-			if words[i].ImageHeight <= 0 {
-				words[i].ImageHeight = meta.height
-			}
-			if words[i].ImageName == "" {
-				words[i].ImageName = meta.name
-			}
+			words[i].ImageWidth = meta.width
+			words[i].ImageHeight = meta.height
+			words[i].ImageName = meta.name
 		} else {
 			// Fallback to first image
-			if words[i].ImageWidth <= 0 {
-				words[i].ImageWidth = defaultMeta.width
-			}
-			if words[i].ImageHeight <= 0 {
-				words[i].ImageHeight = defaultMeta.height
-			}
-			if words[i].ImageName == "" {
-				words[i].ImageName = defaultMeta.name
-			}
+			words[i].ImageWidth = defaultMeta.width
+			words[i].ImageHeight = defaultMeta.height
+			words[i].ImageName = defaultMeta.name
 			if words[i].ImageIndex <= 0 {
 				words[i].ImageIndex = 1
 			}

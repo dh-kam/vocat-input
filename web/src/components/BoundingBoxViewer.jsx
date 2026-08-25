@@ -14,11 +14,16 @@ export function parseBBoxPercentages(bbox, bboxScale = 1000, refWidth = 0, refHe
     return { top: 0, left: 0, width: 0, height: 0, isValid: false };
   }
 
-  // Smart Scale Auto-Detection:
-  // If maxVal <= 100, the coordinates are ALREADY 0~100 percentage values.
-  // If maxVal > 100, the coordinates are 0~1000 scale and MUST be divided by 10.
   const maxVal = Math.max(ymin, xmin, ymax, xmax);
-  if (maxVal > 100) {
+
+  // If coordinates are in absolute pixel coordinates (> 1000 or matching refHeight/refWidth)
+  if (refHeight > 0 && refWidth > 0 && maxVal > 1000) {
+    ymin = (ymin / refHeight) * 100;
+    ymax = (ymax / refHeight) * 100;
+    xmin = (xmin / refWidth) * 100;
+    xmax = (xmax / refWidth) * 100;
+  } else if (maxVal > 100) {
+    // 0~1000 scale
     ymin /= 10.0;
     xmin /= 10.0;
     ymax /= 10.0;
@@ -158,7 +163,7 @@ export function InteractiveRedBoxModal({ wordItem, words = [], bboxScale, imageU
   }, [currentIndex, hasPrev, hasNext, words, onSelectWord]);
 
   const bbox = wordItem?.bbox || wordItem?.bBox;
-  const { top, left, width, height } = parseBBoxPercentages(bbox);
+  const { top, left, width, height } = parseBBoxPercentages(bbox, bboxScale || wordItem?.bboxScale, wordItem?.imageWidth, wordItem?.imageHeight);
 
   const handleZoomIn = () => setZoom(prev => Math.min(4.0, prev + 0.3));
   const handleZoomOut = () => setZoom(prev => Math.max(0.8, prev - 0.3));

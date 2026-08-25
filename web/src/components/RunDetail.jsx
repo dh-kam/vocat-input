@@ -312,6 +312,13 @@ export default function RunDetail({
     return run.ocrResults[0];
   };
 
+  const getImageUrlForWord = (word) => {
+    const srcImg = getSourceImageForWord(word);
+    if (!srcImg || !srcImg.imageName) return '';
+    const ts = run?.updatedAt ? new Date(run.updatedAt).getTime() : '';
+    return `${assetBase}/uploads/${srcImg.imageName}${ts ? `?t=${ts}` : ''}`;
+  };
+
   const isDone = run.status === 'COMPLETED';
   const isInProg = run.progress > 0 && run.progress < 100;
 
@@ -767,11 +774,11 @@ export default function RunDetail({
                       <td className="py-2.5 px-4 text-center">
                         {getSourceImageForWord(wordItem) ? (
                           <CroppedEvidenceThumbnail
-                            imageUrl={`${assetBase}/uploads/${getSourceImageForWord(wordItem).imageName}`}
+                            imageUrl={getImageUrlForWord(wordItem)}
                             bbox={wordItem.bbox || wordItem.bBox}
                             bboxScale={run.bboxScale}
-                            imageWidth={wordItem.imageWidth}
-                            imageHeight={wordItem.imageHeight}
+                            imageWidth={wordItem.imageWidth || getSourceImageForWord(wordItem)?.imageWidth}
+                            imageHeight={wordItem.imageHeight || getSourceImageForWord(wordItem)?.imageHeight}
                             word={wordItem.word}
                             onClick={(e) => { e.stopPropagation(); setSelectedWord(wordItem); }}
                           />
@@ -877,11 +884,11 @@ export default function RunDetail({
                     <div>
                       {getSourceImageForWord(wordItem) ? (
                         <CroppedEvidenceThumbnail
-                          imageUrl={`${assetBase}/uploads/${getSourceImageForWord(wordItem).imageName}`}
+                          imageUrl={getImageUrlForWord(wordItem)}
                           bbox={wordItem.bbox || wordItem.bBox}
                           bboxScale={run.bboxScale}
-                          imageWidth={wordItem.imageWidth}
-                          imageHeight={wordItem.imageHeight}
+                          imageWidth={wordItem.imageWidth || getSourceImageForWord(wordItem)?.imageWidth}
+                          imageHeight={wordItem.imageHeight || getSourceImageForWord(wordItem)?.imageHeight}
                           word={wordItem.word}
                           onClick={(e) => { e.stopPropagation(); setSelectedWord(wordItem); }}
                         />
@@ -1006,11 +1013,8 @@ export default function RunDetail({
           wordItem={selectedWord}
           words={editableWords}
           bboxScale={run.bboxScale}
-          imageUrl={`${assetBase}/uploads/${getSourceImageForWord(selectedWord).imageName}`}
-          getImageUrl={(w) => {
-            const img = getSourceImageForWord(w);
-            return img ? `${assetBase}/uploads/${img.imageName}` : '';
-          }}
+          imageUrl={getImageUrlForWord(selectedWord)}
+          getImageUrl={(w) => getImageUrlForWord(w)}
           onSelectWord={(w) => setSelectedWord(w)}
           onClose={() => setSelectedWord(null)}
         />
