@@ -201,9 +201,6 @@ export default function App({ embedded = false, apiBase } = {}) {
   // Live polling only when conversion is actively in progress
   useEffect(() => {
     if (!selectedRunId || !selectedRun) return;
-    // A partial progress value alone is not enough: the server marks runs FAILED without
-    // resetting progress, and the effect's dependencies never change again for a settled run,
-    // so an interval started on that basis polled roughly nine requests a second forever.
     const isProcessing =
       selectedRun.status === 'OCR_IN_PROGRESS' ||
       selectedRun.status === 'MERGING_CONVERTING' ||
@@ -212,20 +209,17 @@ export default function App({ embedded = false, apiBase } = {}) {
         selectedRun.progress > 0 &&
         selectedRun.progress < 100);
     if (!isProcessing) return;
-    // Adaptive polling: faster during active OCR (1s), slower during merge/convert (3s).
-    // This cuts network traffic ~3-9x vs the old fixed 350ms while keeping UI responsive.
-    const pollInterval =
-      selectedRun.status === 'OCR_IN_PROGRESS' ? 1000 :
-      selectedRun.status === 'MERGING_CONVERTING' ? 3000 : 2000;
+
+    const pollInterval = 1000;
     let tickCount = 0;
     const interval = setInterval(() => {
       fetchRunDetail(selectedRunId);
-      // Refresh the run list less frequently (every 5th tick) to reduce load
+      // Refresh the run list every 3rd tick to keep sidebar synced
       tickCount++;
-      if (tickCount % 5 === 0) fetchRuns();
+      if (tickCount % 3 === 0) fetchRuns();
     }, pollInterval);
     return () => clearInterval(interval);
-  }, [selectedRunId, selectedRun?.status]);
+  }, [selectedRunId, selectedRun?.status, selectedRun?.progress]);
 
   const handleCreateRun = async (formData) => {
     try {

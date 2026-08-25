@@ -78,6 +78,19 @@ func CleanTitle(raw string) string {
 		}
 	}
 
+	// Strip prompt leakage if prompt instructions leaked into title
+	promptLeakPhrases := []string{
+		"INDEX NUMBERS", "INDEX NUMBER", "YOU MUST", "You MUST", "you must",
+		"CRITICAL RULES", "PRESERVE ALL", "EXACT TEXT ONLY",
+		"STRICT HEADWORD", "FORMAT-SPECIFIC", "OUTPUT FORMAT",
+	}
+	for _, phrase := range promptLeakPhrases {
+		if idx := strings.Index(strings.ToUpper(t), strings.ToUpper(phrase)); idx != -1 {
+			t = strings.TrimSpace(t[:idx])
+			t = strings.Trim(t, trimCutset)
+		}
+	}
+
 	fields := strings.Fields(t)
 	t = strings.Join(fields, " ")
 

@@ -319,8 +319,12 @@ export default function RunDetail({
     return `${assetBase}/uploads/${srcImg.imageName}${ts ? `?t=${ts}` : ''}`;
   };
 
-  const isDone = run.status === 'COMPLETED';
-  const isInProg = run.progress > 0 && run.progress < 100;
+  const isDone = run.status === 'COMPLETED' || (run.progress >= 100 && run.status !== 'FAILED');
+  const isInProg = !isDone && run.status !== 'FAILED' && (
+    run.status === 'OCR_IN_PROGRESS' ||
+    run.status === 'MERGING_CONVERTING' ||
+    (run.progress > 0 && run.progress < 100)
+  );
 
   return (
     <div className="flex flex-col space-y-6">
