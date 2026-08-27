@@ -129,8 +129,12 @@ export default function RunList({ runs, selectedRunId, onSelectRun, onNewRun, on
           paginatedRuns.map((run) => {
             const isSelected = selectedRunId === run.id;
             const isFailed = run.status === 'FAILED';
-            const isDone = run.status === 'COMPLETED';
-            const isInProg = run.progress > 0 && run.progress < 100 && !isFailed;
+            const isDone = run.status === 'COMPLETED' || (run.progress >= 100 && !isFailed);
+            const isInProg = !isDone && !isFailed && (
+              run.status === 'OCR_IN_PROGRESS' ||
+              run.status === 'MERGING_CONVERTING' ||
+              (run.progress > 0 && run.progress < 100)
+            );
 
             return (
               <div

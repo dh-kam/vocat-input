@@ -135,6 +135,12 @@ export default function App({ embedded = false, apiBase } = {}) {
         const data = await res.json();
         if (requestedRunIdRef.current !== id) return;
         setSelectedRun(data || null);
+        // Synchronously update the sidebar runs list item
+        if (data && data.id) {
+          setRuns((prevRuns) =>
+            prevRuns.map((r) => (r.id === data.id ? { ...r, ...data } : r))
+          );
+        }
       }
     } catch (err) {
       console.error('Failed to fetch run detail:', err);
@@ -208,15 +214,19 @@ export default function App({ embedded = false, apiBase } = {}) {
         selectedRun.status !== 'COMPLETED' &&
         selectedRun.progress > 0 &&
         selectedRun.progress < 100);
-    if (!isProcessing) return;
+
+    if (!isProcessing) {
+      // When run finishes, do a one-off fetchRuns to sync all metadata
+      fetchRuns();
+      return;
+    }
 
     const pollInterval = 1000;
     let tickCount = 0;
     const interval = setInterval(() => {
       fetchRunDetail(selectedRunId);
-      // Refresh the run list every 3rd tick to keep sidebar synced
       tickCount++;
-      if (tickCount % 3 === 0) fetchRuns();
+      if (tickCount % 2 === 0) fetchRuns();
     }, pollInterval);
     return () => clearInterval(interval);
   }, [selectedRunId, selectedRun?.status, selectedRun?.progress]);
