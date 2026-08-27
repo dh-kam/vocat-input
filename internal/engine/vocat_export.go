@@ -191,18 +191,19 @@ func GenerateDocFile(words []WordItem, outputPath string, customTitle ...string)
 	}
 
 	corpus := make([]map[string]interface{}, 0, len(words))
-	for i, it := range words {
-		if strings.TrimSpace(it.Word) == "" {
-			return fmt.Errorf("GenerateDocFile: empty word at index %d", i)
+	for _, it := range words {
+		wordClean := strings.TrimSpace(it.Word)
+		if wordClean == "" {
+			continue
 		}
 		meaning := normalizeMeaning(it.Meaning)
 		if meaning == "" || meaning == "<nil>" {
-			return fmt.Errorf("GenerateDocFile: empty meaning at index %d (word: %s)", i, it.Word)
+			meaning = wordClean
 		}
 		
 		posRaw := strings.TrimSpace(it.Pos)
 		if posRaw == "" {
-			posRaw = inferPos(it.Word, meaning, posRaw)
+			posRaw = inferPos(wordClean, meaning, posRaw)
 		}
 
 		id, idErr := randomID()

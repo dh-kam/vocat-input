@@ -1,0 +1,1192 @@
+[
+  {
+    "no": 1,
+    "word": "tide",
+    "pos": "명",
+    "meaning": "때, 계절",
+    "created": "2026-08-28 00:11:38",
+    "bbox": [
+      20,
+      5,
+      22,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 2,
+    "word": "devastated",
+    "pos": "형",
+    "meaning": "엄청난 충격을 받은",
+    "created": "2026-08-28 00:11:39",
+    "bbox": [
+      22,
+      5,
+      24,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 3,
+    "word": "patent",
+    "pos": "명",
+    "meaning": "특허(권)",
+    "created": "2026-08-28 00:11:40",
+    "bbox": [
+      24,
+      5,
+      26,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 4,
+    "word": "non-profit",
+    "pos": "형",
+    "meaning": "비영리적인",
+    "created": "2026-08-28 00:11:41",
+    "bbox": [
+      26,
+      5,
+      28,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 5,
+    "word": "cultivate",
+    "pos": "동",
+    "meaning": "기르다, 함양하다",
+    "created": "2026-08-28 00:11:42",
+    "bbox": [
+      28,
+      5,
+      30,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 6,
+    "word": "interpret",
+    "pos": "동",
+    "meaning": "이해하다",
+    "created": "2026-08-28 00:11:43",
+    "bbox": [
+      30,
+      5,
+      32,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 7,
+    "word": "minor",
+    "pos": "형",
+    "meaning": "작은",
+    "created": "2026-08-28 00:11:44",
+    "bbox": [
+      32,
+      5,
+      34,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 8,
+    "word": "modern",
+    "pos": "형",
+    "meaning": "현대의",
+    "created": "2026-08-28 00:11:45",
+    "bbox": [
+      34,
+      5,
+      36,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 9,
+    "word": "resource",
+    "pos": "명",
+    "meaning": "자원",
+    "created": "2026-08-28 00:11:46",
+    "bbox": [
+      36,
+      5,
+      38,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 10,
+    "word": "frustrated",
+    "pos": "형",
+    "meaning": "좌절감을 느끼는",
+    "created": "2026-08-28 00:11:47",
+    "bbox": [
+      38,
+      5,
+      40,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 11,
+    "word": "available",
+    "pos": "형",
+    "meaning": "이용할 수 있는",
+    "created": "2026-08-28 00:11:48",
+    "bbox": [
+      40,
+      5,
+      42,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 12,
+    "word": "combine",
+    "pos": "동",
+    "meaning": "결합하다",
+    "created": "2026-08-28 00:11:49",
+    "bbox": [
+      42,
+      5,
+      44,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 13,
+    "word": "necessarily",
+    "pos": "부",
+    "meaning": "반드시",
+    "created": "2026-08-28 00:11:50",
+    "bbox": [
+      44,
+      5,
+      46,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 14,
+    "word": "revive",
+    "pos": "동",
+    "meaning": "부활(재유행)시키다",
+    "created": "2026-08-28 00:11:51",
+    "bbox": [
+      46,
+      5,
+      48,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 15,
+    "word": "countless",
+    "pos": "형",
+    "meaning": "무수한",
+    "created": "2026-08-28 00:11:52",
+    "bbox": [
+      48,
+      5,
+      50,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 16,
+    "word": "supplies",
+    "pos": "명",
+    "meaning": "물품",
+    "created": "2026-08-28 00:11:53",
+    "bbox": [
+      50,
+      5,
+      52,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 17,
+    "word": "conduct",
+    "pos": "동",
+    "meaning": "(특정 행위를) 하다",
+    "created": "2026-08-28 00:11:54",
+    "bbox": [
+      52,
+      5,
+      54,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 18,
+    "word": "highly",
+    "pos": "부",
+    "meaning": "높게",
+    "created": "2026-08-28 00:11:55",
+    "bbox": [
+      54,
+      5,
+      56,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 19,
+    "word": "critically",
+    "pos": "부",
+    "meaning": "비판적으로",
+    "created": "2026-08-28 00:11:56",
+    "bbox": [
+      56,
+      5,
+      58,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 20,
+    "word": "utter",
+    "pos": "동",
+    "meaning": "(말을) 하다",
+    "created": "2026-08-28 00:11:57",
+    "bbox": [
+      58,
+      5,
+      60,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 21,
+    "word": "explain",
+    "pos": "동",
+    "meaning": "설명하다",
+    "created": "2026-08-28 00:11:58",
+    "bbox": [
+      60,
+      5,
+      62,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 22,
+    "word": "mindset",
+    "pos": "명",
+    "meaning": "사고방식",
+    "created": "2026-08-28 00:11:59",
+    "bbox": [
+      62,
+      5,
+      64,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 23,
+    "word": "simultaneously",
+    "pos": "부",
+    "meaning": "동시에",
+    "created": "2026-08-28 00:12:00",
+    "bbox": [
+      64,
+      5,
+      66,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 24,
+    "word": "display",
+    "pos": "동",
+    "meaning": "보여주다",
+    "created": "2026-08-28 00:12:01",
+    "bbox": [
+      66,
+      5,
+      68,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 25,
+    "word": "rob",
+    "pos": "동",
+    "meaning": "도둑질하다",
+    "created": "2026-08-28 00:12:02",
+    "bbox": [
+      68,
+      5,
+      70,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 26,
+    "word": "specification",
+    "pos": "명",
+    "meaning": "설명서",
+    "created": "2026-08-28 00:12:03",
+    "bbox": [
+      70,
+      5,
+      72,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 27,
+    "word": "flexibility",
+    "pos": "명",
+    "meaning": "융통성",
+    "created": "2026-08-28 00:12:04",
+    "bbox": [
+      72,
+      5,
+      74,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 28,
+    "word": "announce",
+    "pos": "동",
+    "meaning": "발표하다",
+    "created": "2026-08-28 00:12:05",
+    "bbox": [
+      74,
+      5,
+      76,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 29,
+    "word": "fade",
+    "pos": "동",
+    "meaning": "희미해지다",
+    "created": "2026-08-28 00:12:06",
+    "bbox": [
+      76,
+      5,
+      78,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 30,
+    "word": "lecture",
+    "pos": "명",
+    "meaning": "강연",
+    "created": "2026-08-28 00:12:07",
+    "bbox": [
+      78,
+      5,
+      80,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 31,
+    "word": "customer",
+    "pos": "명",
+    "meaning": "고객",
+    "created": "2026-08-28 00:12:08",
+    "bbox": [
+      80,
+      5,
+      82,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 32,
+    "word": "negotiation",
+    "pos": "명",
+    "meaning": "협상",
+    "created": "2026-08-28 00:12:09",
+    "bbox": [
+      82,
+      5,
+      84,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 33,
+    "word": "regard",
+    "pos": "동",
+    "meaning": "여기다",
+    "created": "2026-08-28 00:12:10",
+    "bbox": [
+      84,
+      5,
+      86,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 34,
+    "word": "dynamic",
+    "pos": "형",
+    "meaning": "역동적인",
+    "created": "2026-08-28 00:12:11",
+    "bbox": [
+      86,
+      5,
+      88,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 35,
+    "word": "priority",
+    "pos": "명",
+    "meaning": "우선 사항",
+    "created": "2026-08-28 00:12:12",
+    "bbox": [
+      88,
+      5,
+      90,
+      47
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 36,
+    "word": "significant",
+    "pos": "형",
+    "meaning": "상당한",
+    "created": "2026-08-28 00:12:13",
+    "bbox": [
+      20,
+      49,
+      22,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 37,
+    "word": "individual",
+    "pos": "형",
+    "meaning": "각각의",
+    "created": "2026-08-28 00:12:14",
+    "bbox": [
+      22,
+      49,
+      24,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 38,
+    "word": "animated",
+    "pos": "형",
+    "meaning": "만화 영화로 된",
+    "created": "2026-08-28 00:12:15",
+    "bbox": [
+      24,
+      49,
+      26,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 39,
+    "word": "feature",
+    "pos": "명",
+    "meaning": "특징",
+    "created": "2026-08-28 00:12:16",
+    "bbox": [
+      26,
+      49,
+      28,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 40,
+    "word": "retrieve",
+    "pos": "동",
+    "meaning": "(정보를) 검색하다",
+    "created": "2026-08-28 00:12:17",
+    "bbox": [
+      28,
+      49,
+      30,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 41,
+    "word": "decade",
+    "pos": "명",
+    "meaning": "10년",
+    "created": "2026-08-28 00:12:18",
+    "bbox": [
+      30,
+      49,
+      32,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 42,
+    "word": "surrounding",
+    "pos": "형",
+    "meaning": "주변의",
+    "created": "2026-08-28 00:12:19",
+    "bbox": [
+      32,
+      49,
+      34,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 43,
+    "word": "possibility",
+    "pos": "명",
+    "meaning": "가능성",
+    "created": "2026-08-28 00:12:20",
+    "bbox": [
+      34,
+      49,
+      36,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 44,
+    "word": "maintain",
+    "pos": "동",
+    "meaning": "유지하다",
+    "created": "2026-08-28 00:12:21",
+    "bbox": [
+      36,
+      49,
+      38,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 45,
+    "word": "reasonable",
+    "pos": "형",
+    "meaning": "적당한",
+    "created": "2026-08-28 00:12:22",
+    "bbox": [
+      38,
+      49,
+      40,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 46,
+    "word": "earn",
+    "pos": "동",
+    "meaning": "(명성 등을) 얻다, 가져다주다",
+    "created": "2026-08-28 00:12:23",
+    "bbox": [
+      40,
+      49,
+      42,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 47,
+    "word": "occasionally",
+    "pos": "부",
+    "meaning": "가끔",
+    "created": "2026-08-28 00:12:24",
+    "bbox": [
+      42,
+      49,
+      44,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 48,
+    "word": "overwhelmed",
+    "pos": "형",
+    "meaning": "압도된",
+    "created": "2026-08-28 00:12:25",
+    "bbox": [
+      44,
+      49,
+      46,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 49,
+    "word": "romantic",
+    "pos": "형",
+    "meaning": "낭만적인, 아름다운",
+    "created": "2026-08-28 00:12:26",
+    "bbox": [
+      46,
+      49,
+      48,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 50,
+    "word": "cautiously",
+    "pos": "부",
+    "meaning": "조심스럽게",
+    "created": "2026-08-28 00:12:27",
+    "bbox": [
+      48,
+      49,
+      50,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 51,
+    "word": "total",
+    "pos": "형",
+    "meaning": "총, 전체의",
+    "created": "2026-08-28 00:12:28",
+    "bbox": [
+      50,
+      49,
+      52,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 52,
+    "word": "innate",
+    "pos": "형",
+    "meaning": "선천적인",
+    "created": "2026-08-28 00:12:29",
+    "bbox": [
+      52,
+      49,
+      54,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 53,
+    "word": "furnish",
+    "pos": "동",
+    "meaning": "공급하다",
+    "created": "2026-08-28 00:12:30",
+    "bbox": [
+      54,
+      49,
+      56,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 54,
+    "word": "notification",
+    "pos": "명",
+    "meaning": "알림",
+    "created": "2026-08-28 00:12:31",
+    "bbox": [
+      56,
+      49,
+      58,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 55,
+    "word": "distraction",
+    "pos": "명",
+    "meaning": "집중을 방해하는 것",
+    "created": "2026-08-28 00:12:32",
+    "bbox": [
+      58,
+      49,
+      60,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 56,
+    "word": "destruction",
+    "pos": "명",
+    "meaning": "파괴",
+    "created": "2026-08-28 00:12:33",
+    "bbox": [
+      60,
+      49,
+      62,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 57,
+    "word": "occupation",
+    "pos": "명",
+    "meaning": "직업",
+    "created": "2026-08-28 00:12:34",
+    "bbox": [
+      62,
+      49,
+      64,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 58,
+    "word": "solution",
+    "pos": "명",
+    "meaning": "해결책",
+    "created": "2026-08-28 00:12:35",
+    "bbox": [
+      64,
+      49,
+      66,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 59,
+    "word": "stem",
+    "pos": "동",
+    "meaning": "(~에서) 생겨나다",
+    "created": "2026-08-28 00:12:36",
+    "bbox": [
+      66,
+      49,
+      68,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 60,
+    "word": "internal",
+    "pos": "형",
+    "meaning": "내부의",
+    "created": "2026-08-28 00:12:37",
+    "bbox": [
+      68,
+      49,
+      70,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 61,
+    "word": "local",
+    "pos": "형",
+    "meaning": "지역의",
+    "created": "2026-08-28 00:12:38",
+    "bbox": [
+      70,
+      49,
+      72,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 62,
+    "word": "represent",
+    "pos": "동",
+    "meaning": "나타내다",
+    "created": "2026-08-28 00:12:39",
+    "bbox": [
+      72,
+      49,
+      74,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 63,
+    "word": "dispute",
+    "pos": "명",
+    "meaning": "논쟁, 분쟁",
+    "created": "2026-08-28 00:12:40",
+    "bbox": [
+      74,
+      49,
+      76,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 64,
+    "word": "device",
+    "pos": "명",
+    "meaning": "장치",
+    "created": "2026-08-28 00:12:41",
+    "bbox": [
+      76,
+      49,
+      78,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 65,
+    "word": "figure",
+    "pos": "명",
+    "meaning": "모습",
+    "created": "2026-08-28 00:12:42",
+    "bbox": [
+      78,
+      49,
+      80,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 66,
+    "word": "endurance",
+    "pos": "명",
+    "meaning": "인내력",
+    "created": "2026-08-28 00:12:43",
+    "bbox": [
+      80,
+      49,
+      82,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 67,
+    "word": "architecture",
+    "pos": "명",
+    "meaning": "건축 양식",
+    "created": "2026-08-28 00:12:44",
+    "bbox": [
+      82,
+      49,
+      84,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 68,
+    "word": "facilities",
+    "pos": "명",
+    "meaning": "시설",
+    "created": "2026-08-28 00:12:45",
+    "bbox": [
+      84,
+      49,
+      86,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 69,
+    "word": "burden",
+    "pos": "명",
+    "meaning": "부담",
+    "created": "2026-08-28 00:12:46",
+    "bbox": [
+      86,
+      49,
+      88,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  },
+  {
+    "no": 70,
+    "word": "accommodate",
+    "pos": "동",
+    "meaning": "수용하다",
+    "created": "2026-08-28 00:12:47",
+    "bbox": [
+      88,
+      49,
+      90,
+      87
+    ],
+    "imageWidth": 890,
+    "imageHeight": 1280,
+    "imageIndex": 1,
+    "imageName": "photo_2026-08-28_00-02-02.jpg"
+  }
+]

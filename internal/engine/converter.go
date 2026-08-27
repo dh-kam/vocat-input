@@ -366,38 +366,6 @@ OCR TEXT SAMPLE:
 // Returns isAPIKey=true when using an API key (generativelanguage endpoint),
 // isAPIKey=false when using OAuth token (aiplatform endpoint).
 func getVertexCredentials(ctx context.Context) (token, projectID, location string, isAPIKey bool) {
-	// 1. Check for API key first (Gemini API / AI Studio style)
-	token = LookupConfig("GEMINI_API_KEY")
-	if token == "" {
-		token = LookupConfig("VERTEX_AI_API_KEY")
-	}
-	if token == "" {
-		token = LookupConfig("VERTEX_API_KEY")
-	}
-	if token != "" {
-		isAPIKey = true
-		// API key doesn't need projectID/location but set defaults anyway
-		projectID = LookupConfig("GCP_PROJECT_ID")
-		if projectID == "" {
-			projectID = "c0de1ab-dev-494714"
-		}
-		location = LookupConfig("GCP_LOCATION")
-		if location == "" {
-			location = "us-central1"
-		}
-		return
-	}
-
-	// 2. OAuth token flow (Vertex AI)
-	token = LookupConfig("GCLOUD_ACCESS_TOKEN")
-	if token == "" {
-		cmd := exec.CommandContext(ctx, "gcloud", "auth", "print-access-token")
-		out, err := cmd.Output()
-		if err == nil {
-			token = strings.TrimSpace(string(out))
-		}
-	}
-
 	projectID = LookupConfig("GCP_PROJECT_ID")
 	if projectID == "" {
 		cmd := exec.CommandContext(ctx, "gcloud", "config", "get-value", "project")
@@ -414,6 +382,32 @@ func getVertexCredentials(ctx context.Context) (token, projectID, location strin
 	if location == "" {
 		location = "us-central1"
 	}
+
+	// 1. OAuth token flow (Vertex AI with full GCP project access)
+	token = LookupConfig("GCLOUD_ACCESS_TOKEN")
+	if token == "" {
+		cmd := exec.CommandContext(ctx, "gcloud", "auth", "print-access-token")
+		out, err := cmd.Output()
+		if err == nil {
+			token = strings.TrimSpace(string(out))
+			if idx := strings.Index(token, "\n"); idx != -1 {
+				token = strings.TrimSpace(token[:idx])
+			}
+		}
+	}
+
+	if token != "" {
+		isAPIKey = false
+		return
+	}
+
+	// 2. Vertex AI API key fallback
+	token = LookupConfig("VERTEX_AI_API_KEY", "VERTEX_API_KEY")
+	if token != "" {
+		isAPIKey = true
+		return
+	}
+
 	return
 }
 
@@ -609,12 +603,7 @@ Text:
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	if modelName == "" {
-		modelName = LookupConfig("VERTEX_MODEL")
-	}
-	if modelName == "" {
-		modelName = "gemini-2.5-flash"
-	}
+	modelName = MapVertexModelName(modelName)
 
 	endpoint := buildVertexEndpoint(modelName, location, projectID, token, isAPIKey)
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonPayload))
@@ -632,6 +621,13 @@ Text:
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("[Vertex AI Structuring Warning] API error (status %d): %s. Attempting Bedrock fallback...\n", resp.StatusCode, string(body))
+		if bRes, bErr := callBedrockForJSON(ctx, "amazon.nova-pro-v1:0", text, formatInstructions, imagePaths); bErr == nil && bRes != nil {
+			return bRes, nil
+		}
+		if bRes, bErr := callBedrockForJSON(ctx, "us.anthropic.claude-sonnet-4-6", text, formatInstructions, imagePaths); bErr == nil && bRes != nil {
+			return bRes, nil
+		}
 		return nil, fmt.Errorf("vertex api error (status %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -792,6 +788,13 @@ Text:
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("[Google AI Studio Structuring Warning] API error (status %d): %s. Attempting Vertex AI / Bedrock fallback...\n", resp.StatusCode, string(body))
+		if vRes, vErr := callVertexForJSON(ctx, "gemini-2.5-flash", text, formatInstructions, imagePaths); vErr == nil && vRes != nil {
+			return vRes, nil
+		}
+		if bRes, bErr := callBedrockForJSON(ctx, "amazon.nova-pro-v1:0", text, formatInstructions, imagePaths); bErr == nil && bRes != nil {
+			return bRes, nil
+		}
 		return nil, fmt.Errorf("Google AI Studio API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -1251,9 +1254,83 @@ func parseOCRTextFallback(text string, preserveOrder bool) []WordItem {
 	reSimple := regexp.MustCompile(`^(?:(\d+)[\.\s]+)?\s*([a-zA-Z\s\-]{2,})\s*(?:=|:|-)?\s*(.*)$`)
 
 	no := 1
+	reOnlyNum := regexp.MustCompile(`^\d+$`)
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
+			continue
+		}
+
+		// Support Markdown table rows (e.g., "| 1 | 1 | tide | 조수 | 36 | significant | 중요한 |")
+		if strings.Contains(line, "|") {
+			cells := strings.Split(line, "|")
+			var cleanCells []string
+			for _, c := range cells {
+				tc := strings.TrimSpace(c)
+				if tc != "" && tc != "---" && !strings.HasPrefix(tc, "--") {
+					cleanCells = append(cleanCells, tc)
+				}
+			}
+			if len(cleanCells) == 0 {
+				continue
+			}
+
+			// Skip table header rows if all numeric or dashes
+			allNumHeader := true
+			for _, c := range cleanCells {
+				if !reOnlyNum.MatchString(c) {
+					allNumHeader = false
+					break
+				}
+			}
+			if allNumHeader && len(cleanCells) > 4 {
+				continue
+			}
+
+			for cIdx := 0; cIdx < len(cleanCells); cIdx++ {
+				cell := cleanCells[cIdx]
+				// Pattern 1: [num, num_duplicate, english, korean] (e.g. "1", "1", "tide", "조수")
+				if cIdx+3 < len(cleanCells) && reOnlyNum.MatchString(cell) && reOnlyNum.MatchString(cleanCells[cIdx+1]) && isAlphaWord(cleanCells[cIdx+2]) && hasHangul(cleanCells[cIdx+3]) {
+					num, _ := strconv.Atoi(cell)
+					w := cleanCells[cIdx+2]
+					m := cleanCells[cIdx+3]
+					words = append(words, WordItem{
+						No:      num,
+						Word:    w,
+						Pos:     "명",
+						Meaning: m,
+					})
+					cIdx += 3
+					continue
+				}
+				// Pattern 2: [num, english, korean] (e.g. "36", "significant", "중요한")
+				if cIdx+2 < len(cleanCells) && reOnlyNum.MatchString(cell) && isAlphaWord(cleanCells[cIdx+1]) && hasHangul(cleanCells[cIdx+2]) {
+					num, _ := strconv.Atoi(cell)
+					w := cleanCells[cIdx+1]
+					m := cleanCells[cIdx+2]
+					words = append(words, WordItem{
+						No:      num,
+						Word:    w,
+						Pos:     "명",
+						Meaning: m,
+					})
+					cIdx += 2
+					continue
+				}
+				// Pattern 3: [english, korean] (e.g. "tide", "조수")
+				if cIdx+1 < len(cleanCells) && isAlphaWord(cell) && hasHangul(cleanCells[cIdx+1]) {
+					words = append(words, WordItem{
+						No:      no,
+						Word:    cell,
+						Pos:     "명",
+						Meaning: cleanCells[cIdx+1],
+					})
+					no++
+					cIdx++
+					continue
+				}
+			}
 			continue
 		}
 
@@ -1333,6 +1410,33 @@ func parseOCRTextFallback(text string, preserveOrder bool) []WordItem {
 		no++
 	}
 	return words
+}
+
+func isAlphaWord(s string) bool {
+	s = strings.TrimSpace(s)
+	if len(s) < 2 {
+		return false
+	}
+	hasLetter := false
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '-' || r == ' ' || r == '\'' || r == '(' || r == ')' {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				hasLetter = true
+			}
+			continue
+		}
+		return false
+	}
+	return hasLetter
+}
+
+func hasHangul(s string) bool {
+	for _, r := range s {
+		if (r >= 0xAC00 && r <= 0xD7A3) || (r >= 0x1100 && r <= 0x11FF) || (r >= 0x3130 && r <= 0x318F) {
+			return true
+		}
+	}
+	return false
 }
 
 // BBoxOutputScale is the single coordinate space every WordItem.BBox leaves the engine in:
@@ -1543,6 +1647,19 @@ func cleanWordItems(words []WordItem) []WordItem {
 
 		meaningStr = strings.ReplaceAll(meaningStr, "**", "")
 		meaningStr = strings.TrimLeft(meaningStr, " :;-=≠>")
+		meaningStr = strings.TrimSpace(meaningStr)
+
+		// Discard items with empty meaning or meaningless string
+		if meaningStr == "" || meaningStr == "<nil>" {
+			continue
+		}
+
+		// Discard form header words without real Korean definitions (e.g. "Date", "Name", "Score", "Class", "Vocabulary Test")
+		if lowerWord == "date" || lowerWord == "name" || lowerWord == "score" || lowerWord == "class" || lowerWord == "student" || lowerWord == "test" || lowerWord == "page" || lowerWord == "total" {
+			if strings.EqualFold(meaningStr, wordStr) || strings.EqualFold(meaningStr, "null") || strings.EqualFold(meaningStr, "none") {
+				continue
+			}
+		}
 
 		cleaned = append(cleaned, WordItem{
 			No:      itemNo,

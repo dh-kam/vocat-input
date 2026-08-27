@@ -258,21 +258,6 @@ func (f *FallbackChainOCRProvider) ProcessImage(ctx context.Context, imagePath s
 
 // getGoogleOCRAuth resolves API key or OAuth token for Google Gemini/Vertex OCR providers.
 func getGoogleOCRAuth(ctx context.Context) (token, projectID, location string, isAPIKey bool) {
-	// 1. Check API Key environment variables or .env file
-	if v := LookupConfig("VERTEX_API_KEY", "VERTEX_AI_API_KEY", "GEMINI_API_KEY", "GOOGLE_AI_STUDIO_API_KEY"); v != "" {
-		return v, "c0de1ab-dev-494714", "us-central1", true
-	}
-
-	// 2. OAuth token fallback (gcloud auth print-access-token)
-	token = LookupConfig("GCLOUD_ACCESS_TOKEN")
-	if token == "" {
-		cmd := exec.CommandContext(ctx, "gcloud", "auth", "print-access-token")
-		out, err := cmd.Output()
-		if err == nil {
-			token = strings.TrimSpace(string(out))
-		}
-	}
-
 	projectID = LookupConfig("GCP_PROJECT_ID")
 	if projectID == "" {
 		cmd := exec.CommandContext(ctx, "gcloud", "config", "get-value", "project")
@@ -281,7 +266,7 @@ func getGoogleOCRAuth(ctx context.Context) (token, projectID, location string, i
 			projectID = strings.TrimSpace(string(out))
 		}
 	}
-	if projectID == "" {
+	if projectID == "" || projectID == "c0de1ab-dev" {
 		projectID = "c0de1ab-dev-494714"
 	}
 
@@ -290,8 +275,26 @@ func getGoogleOCRAuth(ctx context.Context) (token, projectID, location string, i
 		location = "us-central1"
 	}
 
+	// 1. OAuth token from gcloud (Full GCP quota & verified access)
+	token = LookupConfig("GCLOUD_ACCESS_TOKEN")
+	if token == "" {
+		cmd := exec.CommandContext(ctx, "gcloud", "auth", "print-access-token")
+		out, err := cmd.Output()
+		if err == nil {
+			token = strings.TrimSpace(string(out))
+			if idx := strings.Index(token, "\n"); idx != -1 {
+				token = strings.TrimSpace(token[:idx])
+			}
+		}
+	}
+
 	if token != "" {
 		return token, projectID, location, false
+	}
+
+	// 2. Vertex AI API key fallback
+	if v := LookupConfig("VERTEX_API_KEY", "VERTEX_AI_API_KEY"); v != "" {
+		return v, projectID, location, true
 	}
 
 	return "", "", "", false
@@ -355,13 +358,11 @@ CRITICAL RULES FOR TRANSCRIPTION:
 		modelName = LookupConfig("VERTEX_MODEL")
 	}
 	mLower := strings.ToLower(modelName)
-	if strings.Contains(mLower, "claude") || strings.Contains(mLower, "opus") || strings.Contains(mLower, "sonnet") || strings.Contains(mLower, "haiku") {
+	if strings.Contains(mLower, "claude") || strings.Contains(mLower, "opus") || strings.Contains(mLower, "sonnet") || strings.Contains(mLower, "fable") || strings.Contains(mLower, "haiku") {
 		b := &BedrockOCRProvider{}
 		return b.ProcessImage(ctx, imagePath)
 	}
-	if modelName == "" {
-		modelName = "gemini-2.5-flash"
-	}
+	modelName = MapVertexModelName(modelName)
 
 	jsonPayload, _ := json.Marshal(payload)
 
@@ -389,6 +390,12 @@ CRITICAL RULES FOR TRANSCRIPTION:
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("[Vertex AI OCR Warning] API error (status %d): %s. Attempting Bedrock fallback...\n", resp.StatusCode, string(body))
+		bedrockProv := &BedrockOCRProvider{}
+		if bText, bErr := bedrockProv.ProcessImage(ctx, imagePath); bErr == nil && bText != "" {
+			fmt.Printf("[Vertex AI OCR Fallback Success] Successfully processed image with Bedrock fallback\n")
+			return bText, nil
+		}
 		return "", fmt.Errorf("vertex api error (status %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -809,4 +816,38 @@ func (g *GCPVisionOCRProvider) ProcessImage(ctx context.Context, imagePath strin
 		return "", fmt.Errorf("GCP_VISION_API_KEY not set")
 	}
 	return "", fmt.Errorf("GCP Vision API key configured but pending SDK execution")
+}
+
+// MapVertexModelName maps requested model names to valid Vertex AI publisher models.
+func MapVertexModelName(model string) string {
+	m := strings.ToLower(strings.TrimSpace(model))
+	switch {
+	case strings.Contains(m, "3.1") || strings.Contains(m, "3-1") || strings.Contains(m, "2.5-pro") || strings.Contains(m, "2-5-pro") || (strings.Contains(m, "pro") && !strings.Contains(m, "flash")):
+		return "gemini-2.5-pro"
+	case strings.Contains(m, "lite"):
+		return "gemini-2.5-flash-lite"
+	case strings.Contains(m, "2.0") || strings.Contains(m, "2-0"):
+		return "gemini-2.0-flash"
+	default:
+		return "gemini-2.5-flash"
+	}
+}
+
+// MapGoogleAIStudioModelName maps requested model names for Google AI Studio API.
+func MapGoogleAIStudioModelName(model string) string {
+	m := strings.ToLower(strings.TrimSpace(model))
+	switch {
+	case strings.Contains(m, "3.7") || strings.Contains(m, "3-7"):
+		return "gemini-3.7-flash"
+	case strings.Contains(m, "3.1") || strings.Contains(m, "3-1"):
+		return "gemini-3.1-pro-preview"
+	case strings.Contains(m, "2.5-pro") || strings.Contains(m, "2-5-pro") || (strings.Contains(m, "pro") && !strings.Contains(m, "flash")):
+		return "gemini-2.5-pro"
+	case strings.Contains(m, "lite"):
+		return "gemini-2.5-flash-lite"
+	case strings.Contains(m, "2.0") || strings.Contains(m, "2-0"):
+		return "gemini-2.0-flash"
+	default:
+		return "gemini-2.5-flash"
+	}
 }
