@@ -269,10 +269,15 @@ IMAGE ANALYSIS — answer these questions:
 4. What is the numbering scheme? (sequential? grouped? per-page?)
 5. What content is supplementary and MUST BE EXCLUDED from becoming a headword entry? (e.g., example phrases like 'germ killer', example sentences, derived words, synonyms).
 6. What is the overall textbook title, unit/day name, chapter, or test title printed in the header/top area of the page? (e.g., '절대수능맵 VOCA Inter 3 Vocabulary Test(기본)', 'DAY 01', 'UNIT 10', '워드마스터 수능 2000 Day 12' etc.)
+7. TABLE AND HEADER ROW VISUAL GROUNDING (CRITICAL):
+   - Does this page have table column header rows (e.g. '번호', '단어', '품사', '뜻')? What is its vertical position (Y percentage or pixels)?
+   - Emphasize that the column header row is NOT vocabulary item #1!
+   - State the exact vertical position where Word #1 starts (the row BELOW the column headers) and where the last vocabulary row ends.
 
 Then write EXTRACTION INSTRUCTIONS — a clear, specific prompt section that tells an AI:
 - Exactly how to identify a single main headword entry in this specific format
 - STRICT EXCLUSION: Explicitly list what to SKIP (example phrases/collocations e.g. 'germ killer', example sentences, Korean translations of sentences, derived forms)
+- TABLE STRUCTURE & COORDINATE GROUNDING: If there is a table column header row ('번호', '단어', '품사', '뜻'), explicitly instruct to SKIP it, and state that Word #1 begins on the row BELOW it.
 - How to extract the main word, POS, and Korean meaning for each entry
 - STRICT PRESERVATION: Require keeping the EXACT printed Korean definitions from the image without replacing them with similar/synonym words (e.g., preserve "조산사", NEVER replace with "산부인과 의사")
 - How to preserve original numbering
@@ -560,11 +565,14 @@ Output a JSON object containing:
    - DO NOT crop margins, borders, or change the coordinate origin!
    - [0, 0] is strictly the literal top-left corner (pixel 0, 0) of this provided %dx%d image file.
    - [%d, %d] is strictly the literal bottom-right corner (pixel %d, %d) of this image file.
-2. TABLE STRUCTURE & VISUAL GROUNDING:
-   - Top Header Area: The page title, textbook name, date, and student name appear at the top.
-   - Table Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it!
-   - First Word Row: Word #1 is strictly on the row BELOW the table column header! DO NOT shift row coordinates upward!
-3. ENTIRE ENTRY ROW/BLOCK BOXING:
+2. TABLE STRUCTURE & VISUAL GROUNDING (CRITICAL FOR ACCURATE ROW BOXING):
+   - Header area: The test sheet title, textbook name, date, and student name appear in the header area at the top (usually Y: 0 to ~180px or 0%% to ~14%%).
+   - Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it! It is located around Y: 14.8%% to 17.0%% (190px to 218px).
+   - First Word Row: Word #1 is strictly on the row BELOW the table column header! On standard test sheets, Word #1 begins at Y >= 17.3%% (>= 222px)! NEVER output Y < 17%% (or Y < 220px) for Word #1!
+   - Last Word Row: The table data ends around Y <= 92%% (Y <= 1180px). The bottom paper margin (Y > 92%%) is empty whitespace; DO NOT stretch entries down to Y=98%%!
+3. NO UNIFORM ESTIMATION OR LINEAR INTERPOLATION:
+   - Do NOT evenly divide coordinates with a simple linear formula! Inspect the actual visual line position of each printed row in the image.
+4. ENTIRE ENTRY ROW/BLOCK BOXING:
    - Each word's "bbox": [ymin, xmin, ymax, xmax] MUST tightly frame the entire horizontal row of that vocabulary item (from the item number on the left, across the English headword and POS, to the end of the printed Korean meaning on the right).
    - On 2-column sheets, frame the full column row width (left column: xmin ~ 4%% to xmax ~ 49%%; right column: xmin ~ 51%% to xmax ~ 96%%).
    - Aspect Ratio: %.3f (Width / Height). Measure ymin and ymax strictly based on your canvas coordinates without aspect distortion.
@@ -727,11 +735,14 @@ Output a JSON object containing:
    - DO NOT crop margins, borders, or change the coordinate origin!
    - [0, 0] is strictly the literal top-left corner (pixel 0, 0) of this provided %dx%d image file.
    - [%d, %d] is strictly the literal bottom-right corner (pixel %d, %d) of this image file.
-2. TABLE STRUCTURE & VISUAL GROUNDING:
-   - Top Header Area: The page title, textbook name, date, and student name appear at the top.
-   - Table Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it!
-   - First Word Row: Word #1 is strictly on the row BELOW the table column header! DO NOT shift row coordinates upward!
-3. ENTIRE ENTRY ROW/BLOCK BOXING:
+2. TABLE STRUCTURE & VISUAL GROUNDING (CRITICAL FOR ACCURATE ROW BOXING):
+   - Header area: The test sheet title, textbook name, date, and student name appear in the header area at the top (usually Y: 0 to ~180px or 0%% to ~14%%).
+   - Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it! It is located around Y: 14.8%% to 17.0%% (190px to 218px).
+   - First Word Row: Word #1 is strictly on the row BELOW the table column header! On standard test sheets, Word #1 begins at Y >= 17.3%% (>= 222px)! NEVER output Y < 17%% (or Y < 220px) for Word #1!
+   - Last Word Row: The table data ends around Y <= 92%% (Y <= 1180px). The bottom paper margin (Y > 92%%) is empty whitespace; DO NOT stretch entries down to Y=98%%!
+3. NO UNIFORM ESTIMATION OR LINEAR INTERPOLATION:
+   - Do NOT evenly divide coordinates with a simple linear formula! Inspect the actual visual line position of each printed row in the image.
+4. ENTIRE ENTRY ROW/BLOCK BOXING:
    - Each word's "bbox": [ymin, xmin, ymax, xmax] MUST tightly frame the entire horizontal row of that vocabulary item (from the item number on the left, across the English headword and POS, to the end of the printed Korean meaning on the right).
    - On 2-column sheets, frame the full column row width (left column: xmin ~ 4%% to xmax ~ 49%%; right column: xmin ~ 51%% to xmax ~ 96%%).
    - Aspect Ratio: %.3f (Width / Height). Measure ymin and ymax strictly based on your canvas coordinates without aspect distortion.
@@ -931,11 +942,14 @@ Output a JSON object containing:
    - DO NOT crop margins, borders, or change the coordinate origin!
    - [0, 0] is strictly the literal top-left corner (pixel 0, 0) of this provided %dx%d image file.
    - [%d, %d] is strictly the literal bottom-right corner (pixel %d, %d) of this image file.
-2. TABLE STRUCTURE & VISUAL GROUNDING:
-   - Top Header Area: The page title, textbook name, date, and student name appear at the top.
-   - Table Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it!
-   - First Word Row: Word #1 is strictly on the row BELOW the table column header! DO NOT shift row coordinates upward!
-3. ENTIRE ENTRY ROW/BLOCK BOXING:
+2. TABLE STRUCTURE & VISUAL GROUNDING (CRITICAL FOR ACCURATE ROW BOXING):
+   - Header area: The test sheet title, textbook name, date, and student name appear in the header area at the top (usually Y: 0 to ~180px or 0%% to ~14%%).
+   - Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it! It is located around Y: 14.8%% to 17.0%% (190px to 218px).
+   - First Word Row: Word #1 is strictly on the row BELOW the table column header! On standard test sheets, Word #1 begins at Y >= 17.3%% (>= 222px)! NEVER output Y < 17%% (or Y < 220px) for Word #1!
+   - Last Word Row: The table data ends around Y <= 92%% (Y <= 1180px). The bottom paper margin (Y > 92%%) is empty whitespace; DO NOT stretch entries down to Y=98%%!
+3. NO UNIFORM ESTIMATION OR LINEAR INTERPOLATION:
+   - Do NOT evenly divide coordinates with a simple linear formula! Inspect the actual visual line position of each printed row in the image.
+4. ENTIRE ENTRY ROW/BLOCK BOXING:
    - Each word's "bbox": [ymin, xmin, ymax, xmax] MUST tightly frame the entire horizontal row of that vocabulary item (from the item number on the left, across the English headword and POS, to the end of the printed Korean meaning on the right).
    - On 2-column sheets, frame the full column row width (left column: xmin ~ 4%% to xmax ~ 49%%; right column: xmin ~ 51%% to xmax ~ 96%%).
    - Aspect Ratio: %.3f (Width / Height). Measure ymin and ymax strictly based on your canvas coordinates without aspect distortion.
@@ -1581,6 +1595,21 @@ func normalizeBBoxes(words []WordItem) {
 						if bbox[3] < 92 {
 							bbox[3] = 96
 						}
+					}
+				}
+			}
+		}
+
+		// Defense-in-depth: On sheets with 20+ words, if Word #1 has ymin <= 15% (falling on the column header row ~14.8%),
+		// calibrate the vertical shift downward so Row #1 starts on the actual first data row (>= 17.3%)
+		if len(indices) >= 20 && words[indices[0]].No == 1 {
+			firstBox := words[indices[0]].BBox
+			if len(firstBox) >= 4 && firstBox[0] <= 15 && firstBox[2] <= 18 {
+				shiftY := 17 - firstBox[0]
+				for _, idx := range indices {
+					if len(words[idx].BBox) >= 4 {
+						words[idx].BBox[0] = int(math.Min(float64(BBoxOutputScale-1), float64(words[idx].BBox[0]+shiftY)))
+						words[idx].BBox[2] = int(math.Min(float64(BBoxOutputScale), float64(words[idx].BBox[2]+shiftY)))
 					}
 				}
 			}

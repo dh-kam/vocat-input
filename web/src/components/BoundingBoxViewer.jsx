@@ -5,7 +5,7 @@ import { ZoomIn, ZoomOut, RotateCcw, X, Eye, Move, ChevronLeft, ChevronRight } f
 /**
  * Normalizes BBox array [ymin, xmin, ymax, xmax] (0~1000 or 0~100 scale) to percentage values (0~100)
  */
-export function parseBBoxPercentages(bbox, bboxScale = 1000, refWidth = 0, refHeight = 0) {
+export function parseBBoxPercentages(bbox, bboxScale = 100, refWidth = 0, refHeight = 0) {
   if (!bbox || !Array.isArray(bbox) || bbox.length < 4) {
     return { top: 0, left: 0, width: 0, height: 0, isValid: false };
   }
@@ -16,19 +16,20 @@ export function parseBBoxPercentages(bbox, bboxScale = 1000, refWidth = 0, refHe
 
   const maxVal = Math.max(ymin, xmin, ymax, xmax);
 
-  // If coordinates are in absolute pixel coordinates or AI canvas coordinates (> 100)
+  // If coordinates are in absolute pixel coordinates (> 100) and reference dimensions exist
   if (refHeight > 0 && refWidth > 0 && maxVal > 100) {
     ymin = (ymin / refHeight) * 100;
     ymax = (ymax / refHeight) * 100;
     xmin = (xmin / refWidth) * 100;
     xmax = (xmax / refWidth) * 100;
-  } else if (maxVal > 100) {
-    // 0~1000 scale
+  } else if (bboxScale === 1000 || maxVal > 100) {
+    // 0~1000 scale converted to 0~100 percentage
     ymin /= 10.0;
     xmin /= 10.0;
     ymax /= 10.0;
     xmax /= 10.0;
   }
+  // Otherwise, coordinates are already in 0~100 percentage scale
 
   const top = Math.max(0, Math.min(100, ymin));
   const left = Math.max(0, Math.min(100, xmin));
@@ -332,12 +333,12 @@ export function InteractiveRedBoxModal({ wordItem, words = [], bboxScale, imageU
                 transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
                 transformOrigin: 'center center'
               }}
-              className="relative inline-block"
+              className="relative inline-block m-0 p-0 leading-none"
             >
               <img 
                 src={currentImageUrl} 
                 alt="Source Evidence" 
-                className="h-[calc(72vh-110px)] max-h-full max-w-[80vw] w-auto rounded-lg shadow-2xl border border-slate-800 pointer-events-none object-contain mt-1"
+                className="block max-h-[calc(72vh-110px)] max-w-[80vw] w-auto h-auto rounded-lg shadow-2xl ring-1 ring-slate-800 pointer-events-none select-none m-0 p-0"
               />
               {(() => {
                 const { top, left, width, height, isValid } = parseBBoxPercentages(wordItem?.bbox, bboxScale || wordItem?.bboxScale, wordItem?.imageWidth, wordItem?.imageHeight);
