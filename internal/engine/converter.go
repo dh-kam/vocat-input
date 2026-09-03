@@ -539,40 +539,43 @@ I am also providing the source images — use them to determine accurate boundin
 - If no clear header title is found, set "title" to an empty string ("").
 
 === OUTPUT FORMAT & CANVAS DIMENSION SPECIFICATION ===
-The source image actual physical resolution is %dx%d pixels.
+The source image actual physical resolution is %dx%d pixels (Width x Height).
 Output a JSON object containing:
 - "title" (string): Overall textbook name and unit/day (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01").
-- "imageWidth" (integer): Canvas width (in pixels or coordinate units) you perceived and bounded within (%d).
-- "imageHeight" (integer): Canvas height (in pixels or coordinate units) you perceived and bounded within (%d).
+- "imageWidth" (integer): Canvas width (%d).
+- "imageHeight" (integer): Canvas height (%d).
 - "words": Array of JSON objects, where each object contains:
   * "no" (integer): Original sequence number from OCR. Auto-increment from 1 if missing.
   * "word" (string): Clean English headword. Remove trailing punctuation.
   * "pos" (string): Korean POS abbreviation: "명"/"동"/"형"/"부"/"전"/"접". Infer from context. DO NOT default all to "명".
   * "meaning" (string): EXACT Korean meaning(s) ONLY from source image, comma-separated. DO NOT replace with synonyms. NO English text.
-  * "bbox" (array of 4 integers): [ymin, xmin, ymax, xmax] measured strictly in coordinates of [0, 0, imageWidth, imageHeight] (or 0-1000 scale). Frame the full entry row or block containing the number, word, and printed Korean meaning.
-  * "imageWidth" (integer): Canvas width used for this word's bbox.
-  * "imageHeight" (integer): Canvas height used for this word's bbox.
+  * "bbox" (array of 4 integers): [ymin, xmin, ymax, xmax] measured in literal pixels of [0, 0, %d, %d] (or exact 0-1000 scale). Frame the full horizontal entry row containing the number, word, POS, and printed Korean meaning.
+  * "imageWidth" (integer): Canvas width (%d).
+  * "imageHeight" (integer): Canvas height (%d).
   * "imageIndex" (integer): 1-based index indicating which image the word appears in.
 
-=== IMAGE RESOLUTION & ASPECT RATIO SPECIFICATION ===
-- Physical Image Dimensions: %dx%d pixels (Width x Height).
-- Aspect Ratio: %.3f (Width / Height).
-- CRITICAL ASPECT CORRECTION: Measure ymin and ymax strictly based on your canvas coordinates. DO NOT distort aspect ratio!
-
-=== DYNAMIC VISUAL ENTRY BLOCK BOUNDING BOX (BBOX) RULES ===
-1. ABSOLUTE ZERO HARDCODING: Do NOT guess or use static preset numbers. You MUST dynamically inspect the actual image visual content for each image.
-2. ENTIRE ENTRY ROW/BLOCK BOXING: The "bbox" array [ymin, xmin, ymax, xmax] MUST frame the full entry row or block (word number, English headword, and Korean meaning).
-3. MULTI-COLUMN TEST SHEETS vs TEXTBOOK PAGES:
-   - On multi-column test sheets or tables, frame the row of that item.
-   - On textbook pages with example sentences, frame the full vocabulary block.
+=== CRITICAL COORDINATE ANCHORING & NO INTERNAL CROPPING (STRICT) ===
+1. ABSOLUTELY NO INTERNAL CROPPING, PADDING, OR RESCALING:
+   - You are provided with an image of exact dimensions %d pixels (width) x %d pixels (height).
+   - DO NOT crop margins, borders, or change the coordinate origin!
+   - [0, 0] is strictly the literal top-left corner (pixel 0, 0) of this provided %dx%d image file.
+   - [%d, %d] is strictly the literal bottom-right corner (pixel %d, %d) of this image file.
+2. TABLE STRUCTURE & VISUAL GROUNDING:
+   - Top Header Area: The page title, textbook name, date, and student name appear at the top.
+   - Table Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it!
+   - First Word Row: Word #1 is strictly on the row BELOW the table column header! DO NOT shift row coordinates upward!
+3. ENTIRE ENTRY ROW/BLOCK BOXING:
+   - Each word's "bbox": [ymin, xmin, ymax, xmax] MUST tightly frame the entire horizontal row of that vocabulary item (from the item number on the left, across the English headword and POS, to the end of the printed Korean meaning on the right).
+   - On 2-column sheets, frame the full column row width (left column: xmin ~ 4%% to xmax ~ 49%%; right column: xmin ~ 51%% to xmax ~ 96%%).
+   - Aspect Ratio: %.3f (Width / Height). Measure ymin and ymax strictly based on your canvas coordinates without aspect distortion.
 
 OCR Transcriptions:
-%s`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, float64(realWidth)/float64(realHeight), text)
+%s`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realHeight, realWidth, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, realHeight, realWidth, realHeight, realWidth, float64(realWidth)/float64(realHeight), text)
 	} else {
-		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (textbook/unit title from header if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers relative to [0, 0, imageWidth, imageHeight]), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
+		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (textbook/unit title from header if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers [ymin, xmin, ymax, xmax] in pixels of [0, 0, %d, %d], tightly framing the full horizontal entry row, NOT the column header), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
 
 Text:
-%s`, realWidth, realHeight, realWidth, realHeight, text)
+%s`, realWidth, realHeight, realHeight, realWidth, realWidth, realHeight, text)
 	}
 
 	// Build multimodal parts: images first, then text prompt
@@ -703,40 +706,43 @@ I am also providing the source images — use them to determine accurate boundin
 - If no clear header title is found, set "title" to an empty string ("").
 
 === OUTPUT FORMAT & CANVAS DIMENSION SPECIFICATION ===
-The source image actual physical resolution is %dx%d pixels.
+The source image actual physical resolution is %dx%d pixels (Width x Height).
 Output a JSON object containing:
 - "title" (string): Overall textbook name and unit/day (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01").
-- "imageWidth" (integer): Canvas width (in pixels or coordinate units) you perceived and bounded within (%d).
-- "imageHeight" (integer): Canvas height (in pixels or coordinate units) you perceived and bounded within (%d).
+- "imageWidth" (integer): Canvas width (%d).
+- "imageHeight" (integer): Canvas height (%d).
 - "words": Array of JSON objects, where each object contains:
   * "no" (integer): Original sequence number from OCR. Auto-increment from 1 if missing.
   * "word" (string): Clean English headword. Remove trailing punctuation.
   * "pos" (string): Korean POS abbreviation: "명"/"동"/"형"/"부"/"전"/"접". Infer from context. DO NOT default all to "명".
   * "meaning" (string): EXACT Korean meaning(s) ONLY from source image, comma-separated. DO NOT replace with synonyms. NO English text.
-  * "bbox" (array of 4 integers): [ymin, xmin, ymax, xmax] measured strictly in coordinates of [0, 0, imageWidth, imageHeight] (or 0-1000 scale). Frame the full entry row or block containing the number, word, and printed Korean meaning.
-  * "imageWidth" (integer): Canvas width used for this word's bbox.
-  * "imageHeight" (integer): Canvas height used for this word's bbox.
+  * "bbox" (array of 4 integers): [ymin, xmin, ymax, xmax] measured in literal pixels of [0, 0, %d, %d] (or exact 0-1000 scale). Frame the full horizontal entry row containing the number, word, POS, and printed Korean meaning.
+  * "imageWidth" (integer): Canvas width (%d).
+  * "imageHeight" (integer): Canvas height (%d).
   * "imageIndex" (integer): 1-based index indicating which image the word appears in.
 
-=== IMAGE RESOLUTION & ASPECT RATIO SPECIFICATION ===
-- Physical Image Dimensions: %dx%d pixels (Width x Height).
-- Aspect Ratio: %.3f (Width / Height).
-- CRITICAL ASPECT CORRECTION: Measure ymin and ymax strictly based on your canvas coordinates. DO NOT distort aspect ratio!
-
-=== DYNAMIC VISUAL ENTRY BLOCK BOUNDING BOX (BBOX) RULES ===
-1. ABSOLUTE ZERO HARDCODING: Do NOT guess or use static preset numbers. You MUST dynamically inspect the actual image visual content for each image.
-2. ENTIRE ENTRY ROW/BLOCK BOXING: The "bbox" array [ymin, xmin, ymax, xmax] MUST frame the full entry row or block (word number, English headword, and Korean meaning).
-3. MULTI-COLUMN TEST SHEETS vs TEXTBOOK PAGES:
-   - On multi-column test sheets or tables, frame the row of that item.
-   - On textbook pages with example sentences, frame the full vocabulary block.
+=== CRITICAL COORDINATE ANCHORING & NO INTERNAL CROPPING (STRICT) ===
+1. ABSOLUTELY NO INTERNAL CROPPING, PADDING, OR RESCALING:
+   - You are provided with an image of exact dimensions %d pixels (width) x %d pixels (height).
+   - DO NOT crop margins, borders, or change the coordinate origin!
+   - [0, 0] is strictly the literal top-left corner (pixel 0, 0) of this provided %dx%d image file.
+   - [%d, %d] is strictly the literal bottom-right corner (pixel %d, %d) of this image file.
+2. TABLE STRUCTURE & VISUAL GROUNDING:
+   - Top Header Area: The page title, textbook name, date, and student name appear at the top.
+   - Table Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it!
+   - First Word Row: Word #1 is strictly on the row BELOW the table column header! DO NOT shift row coordinates upward!
+3. ENTIRE ENTRY ROW/BLOCK BOXING:
+   - Each word's "bbox": [ymin, xmin, ymax, xmax] MUST tightly frame the entire horizontal row of that vocabulary item (from the item number on the left, across the English headword and POS, to the end of the printed Korean meaning on the right).
+   - On 2-column sheets, frame the full column row width (left column: xmin ~ 4%% to xmax ~ 49%%; right column: xmin ~ 51%% to xmax ~ 96%%).
+   - Aspect Ratio: %.3f (Width / Height). Measure ymin and ymax strictly based on your canvas coordinates without aspect distortion.
 
 OCR Transcriptions:
-%s`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, float64(realWidth)/float64(realHeight), text)
+%s`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realHeight, realWidth, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, realHeight, realWidth, realHeight, realWidth, float64(realWidth)/float64(realHeight), text)
 	} else {
-		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (textbook/unit title from header if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers relative to [0, 0, imageWidth, imageHeight]), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
+		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (textbook/unit title from header if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers [ymin, xmin, ymax, xmax] in pixels of [0, 0, %d, %d], tightly framing the full horizontal entry row, NOT the column header), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
 
 Text:
-%s`, realWidth, realHeight, realWidth, realHeight, text)
+%s`, realWidth, realHeight, realHeight, realWidth, realWidth, realHeight, text)
 	}
 
 	var parts []map[string]interface{}
@@ -904,42 +910,45 @@ Each JSON object = ONE unique English headword with its Korean meaning.
 - If no clear header title is found, set "title" to an empty string ("").
 
 === OUTPUT FORMAT & CANVAS DIMENSION SPECIFICATION ===
-The source image actual physical resolution is %dx%d pixels.
+The source image actual physical resolution is %dx%d pixels (Width x Height).
 Output a JSON object containing:
 - "title" (string): Overall textbook name and unit/day (e.g. "절대수능맵 VOCA Inter 3 Vocabulary Test(기본) DAY 01").
-- "imageWidth" (integer): Canvas width (in pixels or coordinate units) you perceived and bounded within (%d).
-- "imageHeight" (integer): Canvas height (in pixels or coordinate units) you perceived and bounded within (%d).
+- "imageWidth" (integer): Canvas width (%d).
+- "imageHeight" (integer): Canvas height (%d).
 - "words": Array of JSON objects, where each object contains:
   * "no" (integer): Original sequence number.
   * "word" (string): Clean English headword.
   * "pos" (string): Korean POS abbreviation: "명"/"동"/"형"/"부"/"전"/"접"/"관"/"감".
   * "meaning" (string): EXACT Korean meaning(s) ONLY from source image, comma-separated.
-  * "bbox" (array of 4 integers): [ymin, xmin, ymax, xmax] measured strictly in coordinates of [0, 0, imageWidth, imageHeight] (or 0-1000 scale). Frame the full entry row or block containing the number, word, and printed Korean meaning.
-  * "imageWidth" (integer): Canvas width used for this word's bbox.
-  * "imageHeight" (integer): Canvas height used for this word's bbox.
+  * "bbox" (array of 4 integers): [ymin, xmin, ymax, xmax] measured in literal pixels of [0, 0, %d, %d] (or exact 0-1000 scale). Frame the full horizontal entry row containing the number, word, POS, and printed Korean meaning.
+  * "imageWidth" (integer): Canvas width (%d).
+  * "imageHeight" (integer): Canvas height (%d).
   * "imageIndex" (integer): 1-based index indicating which image the word appears in.
 
-=== IMAGE RESOLUTION & ASPECT RATIO SPECIFICATION ===
-- Physical Image Dimensions: %dx%d pixels (Width x Height).
-- Aspect Ratio: %.3f (Width / Height).
-- CRITICAL ASPECT CORRECTION: Measure ymin and ymax strictly based on your canvas coordinates. DO NOT distort aspect ratio!
-
-=== DYNAMIC VISUAL ENTRY BLOCK BOUNDING BOX (BBOX) RULES ===
-1. ABSOLUTE ZERO HARDCODING: Do NOT guess or use static preset numbers. You MUST dynamically inspect the actual image visual content for each image.
-2. ENTIRE ENTRY ROW/BLOCK BOXING: The "bbox" array [ymin, xmin, ymax, xmax] MUST frame the full entry row or block (word number, English headword, and Korean meaning).
-3. MULTI-COLUMN TEST SHEETS vs TEXTBOOK PAGES:
-   - On multi-column test sheets or tables, frame the row of that item.
-   - On textbook pages with example sentences, frame the full vocabulary block.
+=== CRITICAL COORDINATE ANCHORING & NO INTERNAL CROPPING (STRICT) ===
+1. ABSOLUTELY NO INTERNAL CROPPING, PADDING, OR RESCALING:
+   - You are provided with an image of exact dimensions %d pixels (width) x %d pixels (height).
+   - DO NOT crop margins, borders, or change the coordinate origin!
+   - [0, 0] is strictly the literal top-left corner (pixel 0, 0) of this provided %dx%d image file.
+   - [%d, %d] is strictly the literal bottom-right corner (pixel %d, %d) of this image file.
+2. TABLE STRUCTURE & VISUAL GROUNDING:
+   - Top Header Area: The page title, textbook name, date, and student name appear at the top.
+   - Table Column Header Row: The table column headers row ('번호', '단어', '품사', '뜻') is a HEADER, NOT a vocabulary entry! DO NOT assign a bbox or entry to it!
+   - First Word Row: Word #1 is strictly on the row BELOW the table column header! DO NOT shift row coordinates upward!
+3. ENTIRE ENTRY ROW/BLOCK BOXING:
+   - Each word's "bbox": [ymin, xmin, ymax, xmax] MUST tightly frame the entire horizontal row of that vocabulary item (from the item number on the left, across the English headword and POS, to the end of the printed Korean meaning on the right).
+   - On 2-column sheets, frame the full column row width (left column: xmin ~ 4%% to xmax ~ 49%%; right column: xmin ~ 51%% to xmax ~ 96%%).
+   - Aspect Ratio: %.3f (Width / Height). Measure ymin and ymax strictly based on your canvas coordinates without aspect distortion.
 
 OCR Transcriptions:
 %s
 
-Return ONLY a raw JSON array or container object without markdown codeblock preambles.`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, float64(realWidth)/float64(realHeight), text)
+Return ONLY a raw JSON array or container object without markdown codeblock preambles.`, formatInstructions, realWidth, realHeight, realWidth, realHeight, realHeight, realWidth, realWidth, realHeight, realWidth, realHeight, realWidth, realHeight, realHeight, realWidth, realHeight, realWidth, float64(realWidth)/float64(realHeight), text)
 	} else {
-		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (header title if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers relative to [0, 0, imageWidth, imageHeight]), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
+		prompt = fmt.Sprintf(`Extract English vocabulary entries from text into JSON object with "title" (header title if any), "imageWidth" (%d), "imageHeight" (%d), and "words" array with keys: "no", "word", "pos" (Korean 1-char abbreviation "명"/"동"/"형"/"부"/"전"/"접"), "meaning" (EXACT printed Korean meaning, comma-separated), "bbox" (array of 4 integers [ymin, xmin, ymax, xmax] in pixels of [0, 0, %d, %d], tightly framing the full horizontal entry row, NOT the column header), "imageWidth" (%d), "imageHeight" (%d), and "imageIndex".
 
 Text:
-%s`, realWidth, realHeight, realWidth, realHeight, text)
+%s`, realWidth, realHeight, realHeight, realWidth, realWidth, realHeight, text)
 	}
 
 	var payload map[string]interface{}
@@ -1550,6 +1559,29 @@ func normalizeBBoxes(words []WordItem) {
 				}
 				if bbox[3] <= bbox[1] {
 					bbox[1], bbox[3] = thinSpan(bbox[1])
+				}
+
+				// If the box only covers the word column (e.g. width < 25%) on a multi-column sheet,
+				// expand the horizontal bounds to frame the full entry row including number and Korean meaning
+				boxWidth := bbox[3] - bbox[1]
+				if boxWidth < 25 {
+					if bbox[1] < 50 {
+						// Left column
+						if bbox[1] > 5 {
+							bbox[1] = 4
+						}
+						if bbox[3] < 46 {
+							bbox[3] = 49
+						}
+					} else {
+						// Right column
+						if bbox[1] > 54 {
+							bbox[1] = 51
+						}
+						if bbox[3] < 92 {
+							bbox[3] = 96
+						}
+					}
 				}
 			}
 		}
