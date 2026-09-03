@@ -4,15 +4,15 @@ import { X, Upload, Sparkles, Check, Trash2, Zap, Cpu, RefreshCw, ChevronDown, L
 
 const FALLBACK_PROVIDERS = [
   {
-    id: 'google-ai-studio',
-    label: 'Google AI Studio',
-    desc: 'Google AI Studio Gemini API (Direct Key)',
-    defaultModel: 'gemini-2.5-flash',
+    id: 'vertex',
+    label: 'GCP Vertex',
+    desc: 'Google Cloud Vertex AI (Gemini 3.1 & Claude)',
+    defaultModel: 'gemini-3.1-pro-preview',
     models: [
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal & Balanced (Recommended)', default: true },
-      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & Highest Accuracy' },
+      { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', desc: 'Advanced Next-gen Pro Reasoning (Recommended)', default: true },
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal & High Accuracy' },
+      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & Highest OCR Accuracy' },
       { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash', desc: 'Next-gen Flagship Multimodal (Fast & Accurate)' },
-      { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', desc: 'Advanced Next-gen Pro Reasoning' },
       { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Ultra-fast Lightweight' },
       { id: 'claude-sonnet-4-6', label: 'Claude 4.6 Sonnet', desc: 'State-of-the-art AI Multimodal' },
       { id: 'claude-opus-4-6', label: 'Claude 4.6 Opus', desc: 'Ultimate Reasoning & Deep Context' },
@@ -21,15 +21,15 @@ const FALLBACK_PROVIDERS = [
     ],
   },
   {
-    id: 'vertex',
-    label: 'GCP Vertex',
-    desc: 'Google Cloud Vertex AI (Gemini & Claude)',
-    defaultModel: 'gemini-2.5-flash',
+    id: 'google-ai-studio',
+    label: 'Google AI Studio',
+    desc: 'Google AI Studio Gemini API (Direct Key)',
+    defaultModel: 'gemini-3.1-pro-preview',
     models: [
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal & High Accuracy (Recommended)', default: true },
-      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & Highest OCR Accuracy' },
+      { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', desc: 'Advanced Next-gen Pro Reasoning (Recommended)', default: true },
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, Multimodal & Balanced' },
+      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Deep Reasoning & Highest Accuracy' },
       { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash', desc: 'Next-gen Flagship Multimodal (Fast & Accurate)' },
-      { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', desc: 'Advanced Next-gen Pro Reasoning' },
       { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Ultra-fast Lightweight' },
       { id: 'claude-sonnet-4-6', label: 'Claude 4.6 Sonnet', desc: 'State-of-the-art AI Multimodal' },
       { id: 'claude-opus-4-6', label: 'Claude 4.6 Opus', desc: 'Ultimate Reasoning & Deep Context' },
@@ -57,8 +57,8 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [providers, setProviders] = useState(FALLBACK_PROVIDERS);
-  const [ocrProvider, setOcrProvider] = useState('google-ai-studio');
-  const [ocrModel, setOcrModel] = useState('gemini-2.5-flash');
+  const [ocrProvider, setOcrProvider] = useState('vertex');
+  const [ocrModel, setOcrModel] = useState('gemini-3.1-pro-preview');
   const [customModelMode, setCustomModelMode] = useState(false);
   const [customModelInput, setCustomModelInput] = useState('');
   const [isLoadingModels, setIsLoadingModels] = useState(false);
@@ -79,7 +79,7 @@ export default function NewRunModal({ isOpen, onClose, onSubmit }) {
           if (currentP) {
             const hasModel = currentP.models?.some(m => m.id === ocrModel);
             if (!hasModel && !customModelMode) {
-              setOcrModel(currentP.defaultModel || currentP.models?.[0]?.id || 'gemini-2.5-flash');
+              setOcrModel(currentP.defaultModel || currentP.models?.[0]?.id || 'gemini-3.1-pro-preview');
             }
           }
         }

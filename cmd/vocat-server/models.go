@@ -44,18 +44,18 @@ func getDynamicModels(ctx context.Context, forceRefresh bool) []ProviderOption {
 
 	providers := []ProviderOption{
 		{
+			ID:           "vertex",
+			Label:        "GCP Vertex",
+			Desc:         "Google Cloud Vertex AI (Gemini 3.1 & Claude)",
+			DefaultModel: "gemini-3.1-pro-preview",
+			Models:       vertexModels,
+		},
+		{
 			ID:           "google-ai-studio",
 			Label:        "Google AI Studio",
 			Desc:         "Google AI Studio Gemini API (Direct Key)",
-			DefaultModel: "gemini-2.5-flash",
+			DefaultModel: "gemini-3.1-pro-preview",
 			Models:       googleStudioModels,
-		},
-		{
-			ID:           "vertex",
-			Label:        "GCP Vertex",
-			Desc:         "Google Cloud Vertex AI (Gemini 2.5)",
-			DefaultModel: "gemini-2.5-flash",
-			Models:       vertexModels,
 		},
 		{
 			ID:           "bedrock",
@@ -73,10 +73,10 @@ func getDynamicModels(ctx context.Context, forceRefresh bool) []ProviderOption {
 
 func getCuratedVertexModels() []ModelOption {
 	return []ModelOption{
-		{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Desc: "Fast, Multimodal & High Accuracy (Recommended)", Default: true},
+		{ID: "gemini-3.1-pro-preview", Label: "Gemini 3.1 Pro Preview", Desc: "Advanced Next-gen Pro Reasoning (Recommended)", Default: true},
+		{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Desc: "Fast, Multimodal & High Accuracy"},
 		{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Desc: "Deep Reasoning & Highest OCR Accuracy"},
 		{ID: "gemini-3.7-flash", Label: "Gemini 3.7 Flash", Desc: "Next-gen Flagship Multimodal (Fast & Accurate)"},
-		{ID: "gemini-3.1-pro-preview", Label: "Gemini 3.1 Pro Preview", Desc: "Advanced Next-gen Pro Reasoning"},
 		{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Desc: "Ultra-fast Lightweight"},
 		{ID: "claude-sonnet-4-6", Label: "Claude 4.6 Sonnet", Desc: "State-of-the-art AI Multimodal"},
 		{ID: "claude-opus-4-6", Label: "Claude 4.6 Opus", Desc: "Ultimate Reasoning & Deep Context"},

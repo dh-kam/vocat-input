@@ -20,19 +20,19 @@ import (
 
 type ProcessOptions struct {
 	Dir           string `flag:"dir" default:"" usage:"directory containing vocabulary images"`
-	Provider      string `flag:"provider" default:"fallback" usage:"OCR provider engine"`
+	Provider      string `flag:"provider" default:"vertex" usage:"OCR provider engine"`
 	Providers     string `flag:"providers" default:"" usage:"comma-separated list of OCR engines for multi-chain processing (e.g. vertex,cursor)"`
 	DoubleCheck   bool   `flag:"double-check" default:"false" usage:"enable 2-step multi-engine OCR double check & cross-verification"`
 	OutDoc        string `flag:"out-doc" default:"vocat_output.doc" usage:"output .doc test sheet file path"`
 	OutJSON       string `flag:"out-json" default:"vocat_output.json" usage:"output .json file path"`
 	PreserveOrder bool   `flag:"preserve-order" default:"true" usage:"preserve word sequence numbers"`
-	OCRProvider   string `flag:"ocr-provider" default:"bedrock" usage:"AI Structuring provider"`
-	OCRModel      string `flag:"ocr-model" default:"us.anthropic.claude-sonnet-4-6" usage:"AI Structuring model"`
+	OCRProvider   string `flag:"ocr-provider" default:"vertex" usage:"AI Structuring provider"`
+	OCRModel      string `flag:"ocr-model" default:"gemini-3.1-pro-preview" usage:"AI Structuring model"`
 }
 
 type OCROptions struct {
 	Image    string `flag:"image" default:"" usage:"image file path to process OCR"`
-	Provider string `flag:"provider" default:"fallback" usage:"OCR provider engine"`
+	Provider string `flag:"provider" default:"vertex" usage:"OCR provider engine"`
 }
 
 type ConvertOptions struct {
@@ -69,14 +69,14 @@ func newProcessCmd() *cobra.Command {
 	var opts ProcessOptions
 	binder := flagsbinder.NewViperCobraFlagsBinder().
 		String("dir", "", "directory containing vocabulary images").
-		String("provider", "fallback", "OCR provider engine").
+		String("provider", "vertex", "OCR provider engine").
 		String("providers", "", "comma-separated list of OCR engines for multi-chain processing (e.g. vertex,cursor)").
 		Bool("double-check", false, "enable 2-step multi-engine OCR double check & cross-verification").
 		String("out-doc", "vocat_output.doc", "output .doc test sheet file path").
 		String("out-json", "vocat_output.json", "output .json file path").
 		Bool("preserve-order", true, "preserve word sequence numbers").
-		String("ocr-provider", "bedrock", "AI Structuring provider").
-		String("ocr-model", "us.anthropic.claude-sonnet-4-6", "AI Structuring model")
+		String("ocr-provider", "vertex", "AI Structuring provider").
+		String("ocr-model", "gemini-3.1-pro-preview", "AI Structuring model")
 
 	cmd := &cobra.Command{
 		Use:           "process",

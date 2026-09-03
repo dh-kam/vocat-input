@@ -725,7 +725,7 @@ func handleCreateRun(uploadDir string) gin.HandlerFunc {
 			ocrProvider = "vertex"
 		}
 		if ocrModel == "" {
-			ocrModel = "gemini-2.5-flash"
+			ocrModel = "gemini-3.1-pro-preview"
 		}
 
 		run := &engine.ConversionRun{
