@@ -1537,80 +1537,131 @@ func normalizeBBoxes(words []WordItem) {
 		}
 
 		refMax, pixels := detectBBoxScale(groupWords)
-		if refMax == BBoxOutputScale {
-			continue
+		if refMax != BBoxOutputScale {
+			for _, idx := range indices {
+				bbox := words[idx].BBox
+				if len(bbox) < 4 {
+					continue
+				}
+
+				// Determine X and Y reference canvas dimensions:
+				// Priority 1: AI-specified canvas dimensions (or fallback physical dimensions)
+				// Priority 2: Fallback to detected batch reference scale
+				refY, refX := refMax, refMax
+				if words[idx].ImageHeight > 0 && words[idx].ImageWidth > 0 {
+					refY = float64(words[idx].ImageHeight)
+					refX = float64(words[idx].ImageWidth)
+				} else if pixels {
+					if h := words[idx].ImageHeight; h > 0 {
+						refY = float64(h)
+					}
+					if w := words[idx].ImageWidth; w > 0 {
+						refX = float64(w)
+					}
+				}
+
+				wasValid := bbox[2] > bbox[0] && bbox[3] > bbox[1]
+				bbox[0], bbox[2] = toPct(bbox[0], refY), toPct(bbox[2], refY)
+				bbox[1], bbox[3] = toPct(bbox[1], refX), toPct(bbox[3], refX)
+
+				if wasValid {
+					if bbox[2] <= bbox[0] {
+						bbox[0], bbox[2] = thinSpan(bbox[0])
+					}
+					if bbox[3] <= bbox[1] {
+						bbox[1], bbox[3] = thinSpan(bbox[1])
+					}
+				}
+			}
 		}
 
+		// Horizontal row width expansion & validation across all words
 		for _, idx := range indices {
 			bbox := words[idx].BBox
 			if len(bbox) < 4 {
 				continue
 			}
-
-			// Determine X and Y reference canvas dimensions:
-			// Priority 1: AI-specified canvas dimensions (or fallback physical dimensions)
-			// Priority 2: Fallback to detected batch reference scale
-			refY, refX := refMax, refMax
-			if words[idx].ImageHeight > 0 && words[idx].ImageWidth > 0 {
-				refY = float64(words[idx].ImageHeight)
-				refX = float64(words[idx].ImageWidth)
-			} else if pixels {
-				if h := words[idx].ImageHeight; h > 0 {
-					refY = float64(h)
-				}
-				if w := words[idx].ImageWidth; w > 0 {
-					refX = float64(w)
-				}
+			if bbox[2] <= bbox[0] {
+				bbox[0], bbox[2] = thinSpan(bbox[0])
+			}
+			if bbox[3] <= bbox[1] {
+				bbox[1], bbox[3] = thinSpan(bbox[1])
 			}
 
-			wasValid := bbox[2] > bbox[0] && bbox[3] > bbox[1]
-			bbox[0], bbox[2] = toPct(bbox[0], refY), toPct(bbox[2], refY)
-			bbox[1], bbox[3] = toPct(bbox[1], refX), toPct(bbox[3], refX)
-
-			if wasValid {
-				if bbox[2] <= bbox[0] {
-					bbox[0], bbox[2] = thinSpan(bbox[0])
-				}
-				if bbox[3] <= bbox[1] {
-					bbox[1], bbox[3] = thinSpan(bbox[1])
-				}
-
-				// If the box only covers the word column (e.g. width < 25%) on a multi-column sheet,
-				// expand the horizontal bounds to frame the full entry row including number and Korean meaning
-				boxWidth := bbox[3] - bbox[1]
-				if boxWidth < 25 {
-					if bbox[1] < 50 {
-						// Left column
-						if bbox[1] > 5 {
-							bbox[1] = 4
-						}
-						if bbox[3] < 46 {
-							bbox[3] = 49
-						}
-					} else {
-						// Right column
-						if bbox[1] > 54 {
-							bbox[1] = 51
-						}
-						if bbox[3] < 92 {
-							bbox[3] = 96
-						}
+			// Expand horizontal bounds if the box only frames the English headword (< 25% width)
+			boxWidth := bbox[3] - bbox[1]
+			if boxWidth < 25 {
+				if bbox[1] < 50 {
+					// Left column
+					if bbox[1] > 5 {
+						bbox[1] = 4
+					}
+					if bbox[3] < 46 {
+						bbox[3] = 49
+					}
+				} else {
+					// Right column
+					if bbox[1] > 54 {
+						bbox[1] = 51
+					}
+					if bbox[3] < 92 {
+						bbox[3] = 96
 					}
 				}
 			}
 		}
 
-		// Defense-in-depth: On sheets with 20+ words, if Word #1 has ymin <= 15% (falling on the column header row ~14.8%),
-		// calibrate the vertical shift downward so Row #1 starts on the actual first data row (>= 17.3%)
-		if len(indices) >= 20 && words[indices[0]].No == 1 {
-			firstBox := words[indices[0]].BBox
-			if len(firstBox) >= 4 && firstBox[0] <= 15 && firstBox[2] <= 18 {
-				shiftY := 17 - firstBox[0]
-				for _, idx := range indices {
-					if len(words[idx].BBox) >= 4 {
-						words[idx].BBox[0] = int(math.Min(float64(BBoxOutputScale-1), float64(words[idx].BBox[0]+shiftY)))
-						words[idx].BBox[2] = int(math.Min(float64(BBoxOutputScale), float64(words[idx].BBox[2]+shiftY)))
+		// Affine Column Grid Alignment:
+		// When multimodal LLMs linearly divide a 2-column vocabulary sheet, they often start from the
+		// column header row (~14%) and stretch all the way down to the page margin (~98%), whereas the
+		// actual vocabulary rows reside between 17.3% and 93.1%.
+		// Partition words by column and apply affine rescaling if this stretching pattern is detected.
+		colPartitions := make(map[int][]int)
+		for _, idx := range indices {
+			bbox := words[idx].BBox
+			if len(bbox) >= 4 {
+				col := 0
+				if bbox[1] >= 50 {
+					col = 1
+				}
+				colPartitions[col] = append(colPartitions[col], idx)
+			}
+		}
+
+		for _, colIndices := range colPartitions {
+			if len(colIndices) < 15 {
+				continue
+			}
+			minY, maxY := 100, 0
+			for _, idx := range colIndices {
+				b := words[idx].BBox
+				if b[0] < minY {
+					minY = b[0]
+				}
+				if b[2] > maxY {
+					maxY = b[2]
+				}
+			}
+
+			if minY <= 15 && maxY >= 95 {
+				targetMinY := 17.34
+				targetMaxY := 93.12
+				scaleY := (targetMaxY - targetMinY) / float64(maxY - minY)
+				for _, idx := range colIndices {
+					b := words[idx].BBox
+					newYmin := int(math.Round(targetMinY + float64(b[0]-minY)*scaleY))
+					newYmax := int(math.Round(targetMinY + float64(b[2]-minY)*scaleY))
+					if newYmin < 0 {
+						newYmin = 0
 					}
+					if newYmax > BBoxOutputScale {
+						newYmax = BBoxOutputScale
+					}
+					if newYmax <= newYmin {
+						newYmax = newYmin + 2
+					}
+					b[0] = newYmin
+					b[2] = newYmax
 				}
 			}
 		}
