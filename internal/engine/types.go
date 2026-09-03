@@ -47,8 +47,10 @@ type WordItem struct {
 }
 
 type StructuringResult struct {
-	Title string     `json:"title,omitempty"`
-	Words []WordItem `json:"words"`
+	Title       string     `json:"title,omitempty"`
+	ImageWidth  int        `json:"imageWidth,omitempty"`
+	ImageHeight int        `json:"imageHeight,omitempty"`
+	Words       []WordItem `json:"words"`
 }
 
 type OCRResult struct {

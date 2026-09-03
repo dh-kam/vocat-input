@@ -153,6 +153,16 @@ func TestNormalizeBBoxes_ScaleDetection(t *testing.T) {
 		assert.Equal(t, FlexibleBBox{10, 5, 20, 95}, items[0].BBox)
 	})
 
+	t.Run("AI perceived canvas dimensions calculate exact ratios", func(t *testing.T) {
+		// AI says canvas is 800x600 (resized), bbox=[150, 80, 300, 400]
+		items := words([]int{150, 80, 300, 400})
+		items[0].ImageHeight = 600
+		items[0].ImageWidth = 800
+		normalizeBBoxes(items)
+		// ymin: 150/600 = 25%, xmin: 80/800 = 10%, ymax: 300/600 = 50%, xmax: 400/800 = 50%
+		assert.Equal(t, FlexibleBBox{25, 10, 50, 50}, items[0].BBox)
+	})
+
 	t.Run("pixels without a reference frame fall back to the batch maximum", func(t *testing.T) {
 		items := words([]int{300, 80, 600, 1520})
 		normalizeBBoxes(items)

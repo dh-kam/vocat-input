@@ -16,8 +16,8 @@ export function parseBBoxPercentages(bbox, bboxScale = 1000, refWidth = 0, refHe
 
   const maxVal = Math.max(ymin, xmin, ymax, xmax);
 
-  // If coordinates are in absolute pixel coordinates (> 1000 or matching refHeight/refWidth)
-  if (refHeight > 0 && refWidth > 0 && maxVal > 1000) {
+  // If coordinates are in absolute pixel coordinates or AI canvas coordinates (> 100)
+  if (refHeight > 0 && refWidth > 0 && maxVal > 100) {
     ymin = (ymin / refHeight) * 100;
     ymax = (ymax / refHeight) * 100;
     xmin = (xmin / refWidth) * 100;
@@ -32,8 +32,8 @@ export function parseBBoxPercentages(bbox, bboxScale = 1000, refWidth = 0, refHe
 
   const top = Math.max(0, Math.min(100, ymin));
   const left = Math.max(0, Math.min(100, xmin));
-  const width = Math.max(0.1, Math.min(100 - left, xmax - xmin));
-  const height = Math.max(0.1, Math.min(100 - top, ymax - ymin));
+  const width = Math.max(0.5, Math.min(100 - left, xmax - xmin));
+  const height = Math.max(1.2, Math.min(100 - top, ymax - ymin));
   return { top, left, width, height, isValid: true };
 }
 
@@ -59,7 +59,11 @@ export function CroppedEvidenceThumbnail({ imageUrl, bbox, bboxScale, imageWidth
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
 
-      let { top, left, width, height, isValid } = parseBBoxPercentages(bbox, bboxScale, imageWidth, imageHeight);
+      // Use AI canvas dimensions or fallback natural image resolution
+      const rw = imageWidth && imageWidth > 0 ? imageWidth : iw;
+      const rh = imageHeight && imageHeight > 0 ? imageHeight : ih;
+
+      let { top, left, width, height, isValid } = parseBBoxPercentages(bbox, bboxScale, rw, rh);
       
       if (!isValid) {
         top = 10;
@@ -73,9 +77,13 @@ export function CroppedEvidenceThumbnail({ imageUrl, bbox, bboxScale, imageWidth
       const ymax = top + height;
       const xmax = left + width;
 
-      // Add padding margin around the target word bbox
-      const padY = Math.max(2, (ymax - ymin) * 0.3);
-      const padX = Math.max(2, (xmax - xmin) * 0.2);
+      const rawHeight = ymax - ymin;
+      const rawWidth = xmax - xmin;
+
+      // Ensure minimal visible vertical window (at least 3.5%) so thin table lines aren't cut off
+      const minCropHeight = 3.5;
+      const padY = Math.max(1.2, rawHeight < minCropHeight ? (minCropHeight - rawHeight) / 2 : rawHeight * 0.25);
+      const padX = Math.max(1.0, rawWidth * 0.15);
 
       const cropYmin = Math.max(0, ymin - padY);
       const cropXmin = Math.max(0, xmin - padX);
